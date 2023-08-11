@@ -1,0 +1,554 @@
+openapi: "3.0.0"
+info:
+  title: "News"
+  version: "1.0"
+paths:
+  /news:
+    get:
+      tags:
+        - "News"
+      summary: "Get a list of news"
+      parameters:
+        - name: "limit"
+          in: query
+          description: "How many news can be returned on one page of the list?"
+          schema:
+            type: integer
+          example: 10
+        - name: "offset"
+          in: query
+          description: "How many news should be skipped before the page?"
+          schema:
+            type: integer
+          example: 30
+      responses:
+        200:
+          description: "List of news"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NewsShort"
+              example:
+                - id: "1"
+                  headline: "News 1"
+                  datePublished: "2022-01-01T15:00:00+0000"
+                  author:
+                    id: "1"
+                    name: "John Doe"
+                - id: "2"
+                  headline: "News 2"
+                  datePublished: "2022-01-01T17:00:00+0000"
+                  author:
+                    id: "2"
+                    name: "Jane Smith"
+  /news/{newsId}:
+    get:
+      tags:
+        - "News"
+      summary: "Get single news article by ID"
+      parameters:
+        - $ref: "#/components/parameters/NewsIdInPath"
+      responses:
+        200:
+          description: "A news article"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NewsLong"
+              example:
+                id: "1"
+                headline: "News 1"
+                datePublished: "2022-01-01T15:00:00+0000"
+                author:
+                  id: "1"
+                  name: "John Doe"
+                text: "Full text of the news article"
+        404:
+          description: "News not found"
+  /news/{newsId}/revoke:
+    post:
+      tags:
+        - "News"
+      summary: "Revoke the news article, i.e. hide it"
+      parameters:
+        - $ref: "#/components/parameters/NewsIdInPath"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+              required:
+                - reason
+            example:
+              reason: "Fake"
+      responses:
+        204:
+          description: "The news article successfully revoked"
+        403:
+          description: "User has no permission of revoking a news article"
+        404:
+          description: "News not found"
+  /drafts:
+    post:
+      tags:
+        - "Drafts"
+      summary: "Create a draft for news article"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newsId:
+                  type: string
+                  nullable: true
+              required:
+                - newsId
+            examples:
+              "Create a draft from scratch":
+                value:
+                  newsId: null
+              "Create a draft for a news article":
+                value:
+                  newsId: "1234"
+        required: true
+      responses:
+        200:
+          description: "Draft successfully created"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  draftId:
+                    type: string
+                required:
+                  - draftId
+              example:
+                draftId: "1234"
+        403:
+          description: "User can't manage drafts"
+        409:
+          description: "There is another draft already"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  draftId:
+                    type: string
+                  createdBy:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                    required:
+                      - userId
+                required:
+                  - createdBy
+              examples:
+                "For admin user":
+                  description: "Since admin user can delete any draft to release locked editor, draftId is returned."
+                  value:
+                    draftId: "1234"
+                    createdBy:
+                      userId: "1111"
+                "For any other user":
+                  description: "Non admin users can't manage drafts created by another users. Because of this there is no need to return draftId."
+                  value:
+                    createdBy:
+                      userId: "1111"
+  /drafts/{draftId}:
+    get:
+      tags:
+        - "Drafts"
+      summary: "Get a draft by ID"
+      parameters:
+        - $ref: "#/components/parameters/DraftIdInPath"
+      responses:
+        200:
+          description: "A draft"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftLong"
+              example:
+                id: "1234"
+                newsId: "1234"
+                headline: "News 1"
+                datePublished: "2022-01-01T15:00:00+0000"
+                author:
+                  id: "1234"
+                  name: "John Doe"
+                text: "Full text of the news article"
+        403:
+          description: "User can't manage drafts"
+        404:
+          description: "Draft not found"
+    put:
+      tags:
+        - "Drafts"
+      summary: "Update the draft with ID"
+      parameters:
+        - $ref: "#/components/parameters/DraftIdInPath"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                headline:
+                  type: string
+                datePublished:
+                  type: string
+                  nullable: true
+                authorId:
+                  type: string
+                text:
+                  type: string
+              required:
+                - headline
+                - datePublished
+                - authorId
+                - text
+            example:
+              headline: "News 1"
+              datePublished: "2022-01-01T15:00:00+0000"
+              authorId: "1234"
+              text: "Full text of the news article"
+      responses:
+        204:
+          description: "The draft is successfully updated"
+        403:
+          description: "User can't manage drafts"
+        404:
+          description: "Draft not found"
+    delete:
+      tags:
+        - "Drafts"
+      summary: "Delete the draft with ID"
+      parameters:
+        - $ref: "#/components/parameters/DraftIdInPath"
+      responses:
+        204:
+          description: "The draft is successfully deleted"
+        403:
+          description: "User can't manage drafts"
+        404:
+          description: "Draft not found"
+  /drafts/{draftId}/publish:
+    post:
+      tags:
+        - "Drafts"
+      summary: "Publish the draft with ID"
+      parameters:
+        - $ref: "#/components/parameters/DraftIdInPath"
+      responses:
+        204:
+          description: "The draft is successfully published"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  newsId:
+                    type: string
+                required:
+                  - newsId
+              example:
+                newsId: "1234"
+        403:
+          description: "User can't publish drafts"
+        404:
+          description: "Draft not found"
+  /authors:
+    post:
+      tags:
+        - "Authors"
+      summary: "Create an author"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+              required:
+                - name
+            example:
+              name: "John Doe"
+      responses:
+        201:
+          description: "Author created successfully"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authorId:
+                    type: string
+                required:
+                  - authorId
+              example:
+                authorId: "1234"
+        403:
+          description: "User can't manage authors"
+    get:
+      tags:
+        - "Authors"
+      summary: "List authors"
+      parameters:
+        - name: "limit"
+          in: query
+          description: "How many items fit on one page?"
+          schema:
+            type: integer
+          example: 50
+        - name: "offset"
+          in: query
+          description: "How many items should be skipped before the page?"
+          schema:
+            type: integer
+          example: 150
+      responses:
+        200:
+          description: "List of authors"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuthorShort"
+              example:
+                - id: "1234"
+                  name: "John Doe"
+                - id: "5678"
+                  name: "Jane Smith"
+  /authors/{authorId}:
+    put:
+      tags:
+        - "Authors"
+      summary: "Update the author with ID"
+      parameters:
+        - $ref: "#/components/parameters/AuthorIdInPath"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+              required:
+                - name
+            example:
+              name: "John Doe"
+      responses:
+        200:
+          description: "Author updated successfully"
+        403:
+          description: "User can't manage authors"
+        404:
+          description: "Author not found"
+    delete:
+      tags:
+        - "Authors"
+      summary: "Delete the author with ID"
+      parameters:
+        - $ref: "#/components/parameters/AuthorIdInPath"
+      responses:
+        204:
+          description: "Author deleted successfully"
+        403:
+          description: "User can't manage authors"
+        404:
+          description: "Author not found"
+        409:
+          description: "Can't delete an author with at least one published news article"
+  /authors/default:
+    get:
+      tags:
+        - "Authors"
+      summary: "Default author for user"
+      parameters:
+        - name: "userId"
+          in: query
+          description: "ID of the user for which need to know default author. If this parameter is not set or is set to null, current user's ID will be used"
+          schema:
+            type: string
+            nullable: true
+          example: "1234"
+      responses:
+        200:
+          description: "Default author for the user"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  author:
+                    type: object
+                    nullable: true
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                      - id
+                      - name
+                required:
+                  - author
+              examples:
+                "Default author is NOT set":
+                  value:
+                    author: null
+                "Default author is set":
+                  value:
+                    author:
+                      id: "1234"
+                      name: "John Doe"
+    put:
+      tags:
+        - "Authors"
+      summary: "Set default author for user"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  nullable: true
+                authorId:
+                  type: string
+                  nullable: true
+              required:
+                - userId
+                - authorId
+            examples:
+              "For current user":
+                value:
+                  userId: null
+                  authorId: "1234"
+              "For any user":
+                value:
+                  userId: "1234"
+                  authorId: "1234"
+      responses:
+        200:
+          description: "Default author set successfully"
+        403:
+          description: "User can't manage default authors"
+        404:
+          description: "Author not found"
+tags:
+  - name: "News"
+  - name: "Drafts"
+  - name: "Authors"
+components:
+  schemas:
+    NewsShort:
+      type: object
+      properties:
+        id:
+          type: string
+        headline:
+          type: string
+        datePublished:
+          type: string
+        author:
+          $ref: "#/components/schemas/AuthorShort"
+      required:
+        - id
+        - headline
+        - datePublished
+        - author
+    NewsLong:
+      type: object
+      properties:
+        id:
+          type: string
+        headline:
+          type: string
+        datePublished:
+          type: string
+        author:
+          $ref: "#/components/schemas/AuthorShort"
+        text:
+          type: string
+      required:
+        - id
+        - headline
+        - datePublished
+        - author
+        - text
+    AuthorShort:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+      required:
+        - id
+        - name
+    DraftLong:
+      type: object
+      properties:
+        id:
+          type: string
+        newsId:
+          type: string
+        headline:
+          type: string
+        datePublished:
+          type: string
+        author:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+        text:
+          type: string
+      required:
+        - id
+        - newsId
+        - headline
+        - datePublished
+        - author
+  parameters:
+    NewsIdInPath:
+      name: "newsId"
+      in: path
+      description: "ID of the news article"
+      required: true
+      schema:
+        type: string
+      example: "1234"
+    DraftIdInPath:
+      name: "draftId"
+      in: path
+      description: "ID of the draft"
+      required: true
+      schema:
+        type: string
+      example: "1234"
+    AuthorIdInPath:
+      name: "authorId"
+      in: path
+      description: "ID of the author"
+      required: true
+      schema:
+        type:
+          string
+      example: "1234"
