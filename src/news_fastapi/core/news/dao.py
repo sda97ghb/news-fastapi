@@ -1,48 +1,43 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Literal
 
-from news_fastapi.core.news.models import NewsOverview
-from datetime import datetime as DateTime
+from news_fastapi.core.news.models import (
+    NewsArticle,
+    NewsArticleListItem,
+    NewsArticleReference,
+)
+from news_fastapi.core.utils import LoadPolicy, Undefined, UndefinedType
+
+
+@dataclass
+class NewsArticleListFilter:
+    revoked: Literal["no_revoked", "only_revoked"] | UndefinedType = Undefined
 
 
 class NewsDAO(ABC):
     @abstractmethod
-    def get_news_overview_list(self, offset: int, limit: int) -> list[NewsOverview]:
+    def get_news_article_references_for_author(
+        self, author_id: str
+    ) -> list[NewsArticleReference]:
         raise NotImplementedError
 
     @abstractmethod
-    def get_news_overview_list_for_author(self, author_id: str) -> list[NewsOverview]:
+    def get_news_article_list(
+        self,
+        offset: int,
+        limit: int,
+        load_author: LoadPolicy = LoadPolicy.FULL,
+        filter_: NewsArticleListFilter | None = None,
+    ) -> list[NewsArticleListItem]:
         raise NotImplementedError
 
+    @abstractmethod
+    def get_news_article(
+        self, news_id: str, load_author: LoadPolicy = LoadPolicy.FULL
+    ) -> NewsArticle:
+        raise NotImplementedError
 
-class MockNewsDAO(NewsDAO):
-    def get_news_overview_list(self, offset: int, limit: int) -> list[NewsOverview]:
-        return [
-            NewsOverview(
-                id="1234",
-                headline="News 1",
-                date_published=DateTime.fromisoformat("2022-01-01T15:00:00+0000"),
-                author_id="1234",
-            ),
-            NewsOverview(
-                id="5678",
-                headline="News 2",
-                date_published=DateTime.fromisoformat("2022-01-01T16:00:00+0000"),
-                author_id="1234",
-            ),
-        ]
-
-    def get_news_overview_list_for_author(self, author_id: str) -> list[NewsOverview]:
-        return [
-            NewsOverview(
-                id="1234",
-                headline="News 1",
-                date_published=DateTime.fromisoformat("2022-01-01T15:00:00+0000"),
-                author_id="1234",
-            ),
-            NewsOverview(
-                id="5678",
-                headline="News 2",
-                date_published=DateTime.fromisoformat("2022-01-01T16:00:00+0000"),
-                author_id="1234",
-            ),
-        ]
+    @abstractmethod
+    def save_news_article(self, news_article: NewsArticle) -> NewsArticle:
+        raise NotImplementedError

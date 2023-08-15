@@ -3,12 +3,16 @@ from functools import cached_property
 from fastapi import Request
 
 from news_fastapi.core.authors.auth import AuthorsAuth
-from news_fastapi.core.authors.dao import AuthorsDAO, MockAuthorsDAO, DefaultAuthorsDAO, \
-    MockDefaultAuthorsDAO
+from news_fastapi.core.authors.dao import (
+    AuthorsDAO,
+    DefaultAuthorsDAO,
+    MockAuthorsDAO,
+    MockDefaultAuthorsDAO,
+)
 from news_fastapi.core.authors.services import AuthorsService
 from news_fastapi.core.drafts.dao import DraftsDAO, MockDraftsDAO
 from news_fastapi.core.news.auth import NewsAuth
-from news_fastapi.core.news.dao import NewsDAO, MockNewsDAO
+from news_fastapi.core.news.dao import MockNewsDAO, NewsDAO
 from news_fastapi.core.news.services import NewsService
 from news_fastapi.rest_api.authentication import AuthenticationResult, authenticate
 from news_fastapi.rest_api.authors.auth import authors_auth

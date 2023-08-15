@@ -1,8 +1,10 @@
 from typing import Any
 
 from news_fastapi.core.news.auth import NewsAuth
-from news_fastapi.rest_api.authentication import AuthenticationResult, \
-    JWTAuthenticationResult
+from news_fastapi.rest_api.authentication import (
+    AuthenticationResult,
+    JWTAuthenticationResult,
+)
 
 
 class JWTNewsAuth(NewsAuth):

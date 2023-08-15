@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Request, Path, Query, Body
+from fastapi import APIRouter, Body, Path, Query, Request
 from pydantic import BaseModel
 
 from news_fastapi.rest_api.authors.models import AuthorShort
@@ -66,16 +66,19 @@ def get_news_list(
     ]
 
 
-@router.get("/{newsId}", response_model=NewsLong, tags=["News"], summary="Get single news article by ID")
+@router.get(
+    "/{newsId}",
+    response_model=NewsLong,
+    tags=["News"],
+    summary="Get single news article by ID",
+)
 def get_news(
     request: Request,
-    news_id: Annotated[str, Path(
-        description="ID of the news article", examples=["1234"]
-    )],
+    news_id: Annotated[
+        str, Path(description="ID of the news article", examples=["1234"])
+    ],
 ):
     container = NewsRequestContainer(request)
     news_service = container.news_service
     news = news_service.get_news(news_id=news_id)
-    return NewsLong(
-
-    )
+    return NewsLong()
