@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from news_fastapi.utils.exceptions import AuthorizationError
+from news_fastapi.application.exceptions import AuthorizationError
 
 
 class NewsAuth(ABC):
@@ -13,8 +13,3 @@ class NewsAuth(ABC):
             raise AuthorizationError(
                 "User doesn't have permission to revoke a news article"
             )
-
-
-class SuperuserNewsAuth(NewsAuth):
-    def can_revoke(self) -> bool:
-        return True

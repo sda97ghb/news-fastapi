@@ -1,6 +1,6 @@
 from tortoise.transactions import in_transaction
 
-from news_fastapi.application.core.transaction import (
+from news_fastapi.application.transaction import (
     TransactionContextManager,
     TransactionManager,
 )

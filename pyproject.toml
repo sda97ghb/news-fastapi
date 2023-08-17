@@ -32,6 +32,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.isort]
 profile = "black"
+combine_as_imports = true
 
 [tool.pylint."MESSAGES CONTROL"]
 disable = """
@@ -42,9 +43,4 @@ disable = """
     too-many-arguments,
     too-few-public-methods,
     duplicate-code,
-"""
-
-[tool.pylint.MAIN]
-ignore-paths = """
-    news_fastapi/application/rest_api/,
 """

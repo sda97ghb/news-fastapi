@@ -1,30 +1,7 @@
-from datetime import UTC
-from datetime import datetime as DateTime
-from datetime import timedelta as TimeDelta
-from typing import Any, Protocol
+from datetime import UTC, datetime as DateTime, timedelta as TimeDelta
+from typing import Any
 
-from jwt import decode as decode_jwt
 from jwt import encode as encode_jwt
-
-
-class JWTConfig(Protocol):
-    key: str
-    issuer: str
-    audience: str
-
-
-def decode_and_verify_jwt(jwt_str: str, jwt_config: JWTConfig) -> dict[str, Any]:
-    claims = decode_jwt(
-        jwt_str,
-        jwt_config.key,
-        algorithms=["HS256"],
-        options={
-            "require": ["exp", "nbf", "iat", "iss", "aud", "sub"],
-        },
-        audience=jwt_config.audience,
-        issuer=jwt_config.issuer,
-    )
-    return claims
 
 
 class MockJWTConfig:
@@ -33,7 +10,9 @@ class MockJWTConfig:
     audience = "https://jwt-audience"
 
 
-def encode_test_jwt(claims: dict[str, Any] = {}) -> str:
+def encode_test_jwt(claims: dict[str, Any] | None = None) -> str:
+    if claims is None:
+        claims = {}
     jwt_config = MockJWTConfig()
     claims["iss"] = jwt_config.issuer
     claims["aud"] = jwt_config.audience

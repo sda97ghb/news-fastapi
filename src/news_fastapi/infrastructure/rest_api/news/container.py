@@ -2,24 +2,23 @@ from functools import cached_property
 
 from fastapi import Request
 
-from news_fastapi.application.core.authors.auth import AuthorsAuth
-from news_fastapi.application.core.authors.dao import (
+from news_fastapi.application.authors import (
+    AuthorsAuth,
     AuthorsDAO,
     DefaultAuthorsDAO,
     MockAuthorsDAO,
     MockDefaultAuthorsDAO,
 )
-from news_fastapi.application.core.authors.services import AuthorsService
-from news_fastapi.application.core.drafts import DraftsDAO, MockDraftsDAO
-from news_fastapi.application.core.news import NewsAuth, NewsService
-from news_fastapi.application.core.news.dao import MockNewsDAO, NewsDAO
-from news_fastapi.application.rest_api.authentication import (
+from news_fastapi.application.authors.services import AuthorsService
+from news_fastapi.application.drafts import DraftsDAO, MockDraftsDAO
+from news_fastapi.application.news import MockNewsDAO, NewsAuth, NewsDAO, NewsService
+from news_fastapi.infrastructure.auth.authentication import JWTConfig, MockJWTConfig
+from news_fastapi.infrastructure.rest_api.authentication import (
     AuthenticationResult,
     authenticate,
 )
-from news_fastapi.application.rest_api.authors.auth import authors_auth
-from news_fastapi.application.rest_api.jwt import JWTConfig, MockJWTConfig
-from news_fastapi.application.rest_api.news.auth import news_auth
+from news_fastapi.infrastructure.rest_api.authors.auth import authors_auth
+from news_fastapi.infrastructure.rest_api.news.auth import news_auth
 
 
 class NewsRequestContainer:

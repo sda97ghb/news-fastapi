@@ -3,8 +3,8 @@ from typing import Annotated
 from fastapi import APIRouter, Path, Query, Request
 from pydantic import BaseModel
 
-from news_fastapi.application.rest_api.authors.models import AuthorShort
-from news_fastapi.application.rest_api.news.container import NewsRequestContainer
+from news_fastapi.infrastructure.rest_api.authors.models import AuthorShort
+from news_fastapi.infrastructure.rest_api.news.container import NewsRequestContainer
 
 router = APIRouter()
 

@@ -1,6 +1,6 @@
-from news_fastapi.application.core.authors.auth import AuthorsAuth
-from news_fastapi.application.core.authors.exceptions import DeleteAuthorError
-from news_fastapi.application.core.transaction import TransactionManager
+from news_fastapi.application.authors.auth import AuthorsAuth
+from news_fastapi.application.authors.exceptions import DeleteAuthorError
+from news_fastapi.application.transaction import TransactionManager
 from news_fastapi.domain.authors import (
     Author,
     AuthorFactory,
@@ -14,22 +14,33 @@ from news_fastapi.utils.sentinels import Undefined, UndefinedType
 class AuthorsListService:
     _author_repository: AuthorRepository
 
+    def __init__(self, author_repository: AuthorRepository) -> None:
+        self._author_repository = author_repository
+
     async def get_page(self, offset: int = 0, limit: int = 50) -> list[Author]:
         return list(await self._author_repository.get_authors_list(offset, limit))
 
 
 class AuthorsService:
     _auth: AuthorsAuth
+    _transaction_manager: TransactionManager
     _author_factory: AuthorFactory
     _author_repository: AuthorRepository
-    _transaction_manager: TransactionManager
     _news_article_repository: NewsArticleRepository
 
     def __init__(
         self,
         auth: AuthorsAuth,
+        transaction_manager: TransactionManager,
+        author_factory: AuthorFactory,
+        author_repository: AuthorRepository,
+        news_article_repository: NewsArticleRepository,
     ) -> None:
         self._auth = auth
+        self._transaction_manager = transaction_manager
+        self._author_factory = author_factory
+        self._author_repository = author_repository
+        self._news_article_repository = news_article_repository
 
     async def create_author(self, name: str) -> str:
         async with self._transaction_manager.in_transaction():
@@ -67,25 +78,23 @@ class AuthorsService:
 
 
 class DefaultAuthorsService:
-    _default_authors_repository: DefaultAuthorRepository
+    _default_author_repository: DefaultAuthorRepository
     _author_repository: AuthorRepository
 
     def __init__(
         self,
+        default_author_repository: DefaultAuthorRepository,
         author_repository: AuthorRepository,
-        default_authors_repository: DefaultAuthorRepository,
     ) -> None:
+        self._default_author_repository = default_author_repository
         self._author_repository = author_repository
-        self._default_authors_repository = default_authors_repository
 
     async def get_default_author(self, user_id: str) -> Author | None:
-        author_id = await self._default_authors_repository.get_default_author_id(
-            user_id
-        )
+        author_id = await self._default_author_repository.get_default_author_id(user_id)
         if author_id is None:
             return None
         author = await self._author_repository.get_author_by_id(author_id)
         return author
 
     async def set_default_author(self, user_id: str, author_id: str | None) -> None:
-        await self._default_authors_repository.set_default_author_id(user_id, author_id)
+        await self._default_author_repository.set_default_author_id(user_id, author_id)

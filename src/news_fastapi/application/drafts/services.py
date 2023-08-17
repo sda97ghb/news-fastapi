@@ -1,13 +1,13 @@
 from datetime import datetime as DateTime
 
-from news_fastapi.application.core.drafts.auth import DraftsAuth
-from news_fastapi.application.core.drafts.exceptions import (
+from news_fastapi.application.drafts.auth import DraftsAuth
+from news_fastapi.application.drafts.exceptions import (
     AlreadyPublishedError,
     CreateDraftConflictError,
     CreateDraftError,
     UpdateDraftError,
 )
-from news_fastapi.application.core.transaction import TransactionManager
+from news_fastapi.application.transaction import TransactionManager
 from news_fastapi.domain.authors import DefaultAuthorRepository
 from news_fastapi.domain.drafts import Draft, DraftFactory, DraftRepository
 from news_fastapi.domain.news import (
@@ -21,25 +21,37 @@ from news_fastapi.utils.sentinels import Undefined, UndefinedType
 
 class DraftsService:
     _auth: DraftsAuth
+    _transaction_manager: TransactionManager
+    _draft_factory: DraftFactory
     _draft_repository: DraftRepository
     _default_author_repository: DefaultAuthorRepository
-    _draft_factory: DraftFactory
-    _news_article_repository: NewsArticleRepository
-    _transaction_manager: TransactionManager
     _news_article_factory: NewsArticleFactory
+    _news_article_repository: NewsArticleRepository
 
     def __init__(
         self,
         auth: DraftsAuth,
+        transaction_manager: TransactionManager,
+        draft_factory: DraftFactory,
+        draft_repository: DraftRepository,
+        default_author_repository: DefaultAuthorRepository,
+        news_article_factory: NewsArticleFactory,
+        news_article_repository: NewsArticleRepository,
     ) -> None:
         self._auth = auth
+        self._transaction_manager = transaction_manager
+        self._draft_factory = draft_factory
+        self._draft_repository = draft_repository
+        self._default_author_repository = default_author_repository
+        self._news_article_factory = news_article_factory
+        self._news_article_repository = news_article_repository
 
-    async def create_draft(self, news_id: str | None) -> Draft:
+    async def create_draft(self, news_article_id: str | None) -> Draft:
         self._auth.check_create_draft()
-        if news_id is None:
+        if news_article_id is None:
             draft = await self._create_draft_from_scratch()
         else:
-            draft = await self._create_draft_for_news_article(news_id)
+            draft = await self._create_draft_for_news_article(news_article_id)
         await self._draft_repository.save(draft)
         return draft
 
@@ -62,7 +74,7 @@ class DraftsService:
                 news_article_id
             )
             raise CreateDraftConflictError(
-                news_id=news_article_id,
+                news_article_id=news_article_id,
                 draft_id=draft.id,
                 created_by_user_id=draft.created_by_user_id,
             )

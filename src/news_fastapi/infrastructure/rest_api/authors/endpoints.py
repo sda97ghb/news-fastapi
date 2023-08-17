@@ -4,9 +4,11 @@ from fastapi import APIRouter, Body, HTTPException, Path, Query, Request
 from pydantic import BaseModel
 from starlette.status import HTTP_201_CREATED, HTTP_409_CONFLICT
 
-from news_fastapi.application.core.authors.exceptions import DeleteAuthorError
-from news_fastapi.application.rest_api.authors.container import AuthorsRequestContainer
-from news_fastapi.application.rest_api.authors.models import AuthorShort
+from news_fastapi.application.authors.exceptions import DeleteAuthorError
+from news_fastapi.infrastructure.rest_api.authors.container import (
+    AuthorsRequestContainer,
+)
+from news_fastapi.infrastructure.rest_api.authors.models import AuthorShort
 
 router = APIRouter()
 
