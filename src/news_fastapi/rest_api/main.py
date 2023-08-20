@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.status import (
@@ -12,9 +14,22 @@ from news_fastapi.rest_api.drafts.endpoints import router as drafts_router
 from news_fastapi.rest_api.news.endpoints import router as news_router
 from news_fastapi.utils.exceptions import NotFoundError
 
+# event_server = EventServer()
+
+
+@asynccontextmanager
+async def lifespan(
+    app: FastAPI,  # pylint: disable=redefined-outer-name,unused-argument
+):
+    # event_server.start()
+    yield
+    # await event_server.stop()
+
+
 app = FastAPI(
     debug=True,
     title="News",
+    lifespan=lifespan,
 )
 app.include_router(authors_router, prefix="/authors")
 app.include_router(drafts_router, prefix="/drafts")

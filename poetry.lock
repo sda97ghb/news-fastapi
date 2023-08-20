@@ -682,7 +682,7 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.11"
-content-hash = "3377138a8771c6981bed7df005541c37e56fa6081ba4a5c1afbed52014a77853"
+content-hash = "6f77ba516bda03653793d1ed28fc4e520dfbbe3c9ca0a82e62d640d180d32817"
 
 [metadata.files]
 aiosqlite = [

@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping
+from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
+
+from news_fastapi.domain.events.models import DomainEvent
 
 
 @runtime_checkable
@@ -51,3 +54,8 @@ class DefaultAuthorRepository(ABC):
     @abstractmethod
     async def set_default_author_id(self, user_id: str, author_id: str | None) -> None:
         raise NotImplementedError
+
+
+@dataclass
+class AuthorDeleted(DomainEvent):
+    author_id: str

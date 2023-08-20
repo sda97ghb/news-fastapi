@@ -15,6 +15,7 @@ fastapi = {extras = ["all"], version = "^0.101.0"}
 pyjwt = "^2.8.0"
 tortoise-orm = {extras = ["asyncpg"], version = "^0.20.0"}
 sqlalchemy = {extras = ["asyncio"], version = "^2.0.19"}
+anyio = "^3.7.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
@@ -43,4 +44,14 @@ disable = """
     too-many-arguments,
     too-few-public-methods,
     duplicate-code,
+"""
+
+[tool.pylint.BASIC]
+good-names = """
+    on
+"""
+
+[tool.pylint.MAIN]
+ignore-paths = """
+    news_fastapi/asyncio_playground.py
 """

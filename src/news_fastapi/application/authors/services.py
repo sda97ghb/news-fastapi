@@ -1,12 +1,17 @@
+from datetime import UTC, datetime as DateTime
+
 from news_fastapi.application.authors.auth import AuthorsAuth
 from news_fastapi.application.authors.exceptions import DeleteAuthorError
 from news_fastapi.application.transaction import TransactionManager
 from news_fastapi.domain.authors import (
     Author,
+    AuthorDeleted,
     AuthorFactory,
     AuthorRepository,
     DefaultAuthorRepository,
 )
+from news_fastapi.domain.events.publisher import DomainEventIdGenerator
+from news_fastapi.domain.events.store import DomainEventStore
 from news_fastapi.domain.news import NewsArticleRepository
 from news_fastapi.utils.sentinels import Undefined, UndefinedType
 
@@ -27,6 +32,8 @@ class AuthorsService:
     _author_factory: AuthorFactory
     _author_repository: AuthorRepository
     _news_article_repository: NewsArticleRepository
+    _domain_event_id_generator: DomainEventIdGenerator
+    _domain_event_store: DomainEventStore
 
     def __init__(
         self,
@@ -72,9 +79,15 @@ class AuthorsService:
                 raise DeleteAuthorError(
                     "Can't delete an author with at least one published news article"
                 )
-            # TODO: send 'author deleted' event
+            await self._publish_author_deleted(author_id)
             # TODO: on 'author deleted' event delete drafts, i.e. eventual consistency
             await self._author_repository.remove(author)
+
+    async def _publish_author_deleted(self, author_id: str) -> None:
+        event_id = await self._domain_event_id_generator.next_event_id()
+        now = DateTime.now(UTC)
+        event = AuthorDeleted(event_id=event_id, date_occurred=now, author_id=author_id)
+        await self._domain_event_store.append(event)
 
 
 class DefaultAuthorsService:
