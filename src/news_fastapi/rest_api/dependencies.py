@@ -1,3 +1,5 @@
+from collections.abc import AsyncIterable
+from functools import cache
 from typing import Annotated
 
 from fastapi import Depends, Request
@@ -16,6 +18,8 @@ from news_fastapi.domain.authors import (
     AuthorRepository,
     DefaultAuthorRepository,
 )
+from news_fastapi.domain.events.models import DomainEvent
+from news_fastapi.domain.events.server import DomainEventServer
 from news_fastapi.domain.news import NewsArticleRepository
 from news_fastapi.infrastructure.auth.http_request import RequestAuthFactory
 from news_fastapi.infrastructure.auth.jwt import JWTConfig
@@ -58,8 +62,29 @@ def news_auth_provider(
     return request_auth_factory.news_auth()
 
 
-def transaction_manager_provider() -> TransactionManager:
-    return TortoiseTransactionManager()
+@cache
+def domain_event_server_provider() -> DomainEventServer:
+    async def mock_event_stream() -> AsyncIterable[DomainEvent]:
+        # pylint: disable=import-outside-toplevel
+        from datetime import datetime as DateTime
+
+        from news_fastapi.domain.events.publisher import UUID4DomainEventIdGenerator
+
+        yield DomainEvent(
+            event_id=await UUID4DomainEventIdGenerator().next_event_id(),
+            date_occurred=DateTime.now(),
+        )
+
+    return DomainEventServer(event_stream=mock_event_stream())
+
+
+def transaction_manager_provider(
+    domain_event_server: Annotated[
+        DomainEventServer, Depends(domain_event_server_provider)
+    ]
+) -> TransactionManager:
+    flag = domain_event_server.should_send_domain_events_flag
+    return TortoiseTransactionManager(should_send_domain_events_flag=flag)
 
 
 def author_factory_provider() -> AuthorFactory:

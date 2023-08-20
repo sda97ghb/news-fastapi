@@ -1,5 +1,10 @@
 import asyncio
-from asyncio import CancelledError, Task, create_task as create_asyncio_task
+from asyncio import (
+    CancelledError,
+    Event as AsyncIOEvent,
+    Task,
+    create_task as create_asyncio_task,
+)
 from collections import defaultdict
 from collections.abc import AsyncIterable, Awaitable, Callable, Collection
 from datetime import datetime as DateTime
@@ -42,29 +47,56 @@ class EventHandlerRegistry:
 
 
 class DomainEventServer:
-    _task: Task | None
+    _listen_task: Task | None
+    _send_task: Task | None
     _event_handler_registry: EventHandlerRegistry
     _event_stream: AsyncIterable[DomainEvent]
+    _should_send_domain_events_flag: AsyncIOEvent
 
     def __init__(self, event_stream: AsyncIterable[DomainEvent]) -> None:
-        self._task = None
+        self._listen_task = None
+        self._send_task = None
         self._event_handler_registry = EventHandlerRegistry()
         self._event_stream = event_stream
+        self._should_send_domain_events_flag = AsyncIOEvent()
+
+    @property
+    def should_send_domain_events_flag(self) -> AsyncIOEvent:
+        return self._should_send_domain_events_flag
 
     def include_registry(self, registry: EventHandlerRegistry) -> None:
         self._event_handler_registry.extend(registry)
 
     def start(self) -> None:
-        if self._task is None:
-            self._task = create_asyncio_task(self._run_server())
+        self.start_listen()
+        self.start_send()
+
+    def start_listen(self) -> None:
+        if self._listen_task is None:
+            self._listen_task = create_asyncio_task(self._run_listen())
+
+    def start_send(self) -> None:
+        if self._send_task is None:
+            self._send_task = create_asyncio_task(self._run_send())
+            self._should_send_domain_events_flag.set()
 
     async def stop(self) -> None:
-        if self._task is not None:
-            self._task.cancel()
-            await self._task
-            self._task = None
+        await self.stop_listen()
+        await self.stop_send()
 
-    async def _run_server(self) -> None:
+    async def stop_listen(self) -> None:
+        if self._listen_task is not None:
+            self._listen_task.cancel()
+            await self._listen_task
+            self._listen_task = None
+
+    async def stop_send(self) -> None:
+        if self._send_task is not None:
+            self._send_task.cancel()
+            await self._send_task
+            self._send_task = None
+
+    async def _run_listen(self) -> None:
         async with create_task_group() as task_group:
             async for event in self._event_stream:
                 event_type = type(event)
@@ -81,6 +113,18 @@ class DomainEventServer:
             raise
         except Exception as err:  # pylint: disable=broad-exception-caught
             print(f"Exception in handler: {err}")
+
+    async def _run_send(self) -> None:
+        try:
+            while await self._should_send_domain_events_flag.wait():
+                self._should_send_domain_events_flag.clear()
+                await self._send()
+        except CancelledError:
+            pass
+
+    async def _send(self) -> None:
+        # TODO: send
+        ...
 
 
 if __name__ == "__main__":
