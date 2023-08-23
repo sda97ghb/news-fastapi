@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Author</title>
+</head>
+<body>
+
+<a href="/">Index</a>
+<a href="/authors-list.html">Authors List</a>
+
+<ul>
+    <li><strong>ID:</strong> <span id="id"></span></li>
+    <li><strong>Old Name:</strong> <span id="oldName"></span></li>
+</ul>
+
+<label for="newName"></label>
+<input id="newName">
+<button id="updateAuthorButton">Update Author</button>
+
+<script>
+    (async () => {
+        let authorId = new URLSearchParams(window.location.search).get("author_id");
+        let response = await fetch(`http://localhost:8000/authors/${authorId}`);
+        let data = await response.json();
+        console.log(data);
+
+        let idElem = document.querySelector("#id");
+        idElem.innerText = authorId;
+
+        let oldNameElem = document.querySelector("#oldName");
+        oldNameElem.innerText = data.name;
+
+        let newNameElem = document.querySelector("#newName");
+        newNameElem.value = data.name;
+
+        let updateAuthorButton = document.querySelector("#updateAuthorButton");
+        updateAuthorButton.addEventListener("click", () => {
+            let newName = newNameElem.value;
+            console.log(`Update ${authorId} set name to ${newName}`);
+            (async () => {
+                let authToken = localStorage.getItem("authToken");
+                let response = await fetch(
+                    `http://localhost:8000/authors/${authorId}`,
+                    {
+                        method: "PUT",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${authToken}`,
+                        },
+                        body: JSON.stringify(
+                            {
+                                name: newName,
+                            }
+                        ),
+                    },
+                );
+                location.reload();
+            })();
+        });
+    })();
+</script>
+
+</body>
+</html>

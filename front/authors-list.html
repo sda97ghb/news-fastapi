@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Authors List</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            padding: 10px;
+        }
+        table {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        th {
+            border: 1px solid black;
+            padding: 10px;
+        }
+        td {
+            border: 1px solid black;
+            padding: 10px;
+        }
+        ul {
+            list-style-position: inside;
+        }
+    </style>
+</head>
+<body>
+
+<a href="/">Index</a>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="authorsList">
+    </tbody>
+</table>
+
+<div>
+    <label for="newAuthorName">New author name:</label>
+    <input id="newAuthorName">
+    <button id="createAuthorButton">Create author</button>
+</div>
+
+<script>
+    const refreshAuthorsList = async () => {
+        let response = await fetch("http://localhost:8000/authors/");
+        let data = await response.json();
+        console.log(data);
+
+        let authorsList = document.querySelector("#authorsList");
+
+        authorsList.innerHTML = "";
+
+        for (let author of data) {
+            console.log(author);
+            let tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${author.id}</td>
+                <td>${author.name}</td>
+                <td>
+                    <a href="/edit-author.html?author_id=${author.id}">Edit</a>
+                    <a href="#" onclick="deleteAuthor('${author.id}')">Delete</a>
+                </td>
+            `;
+            authorsList.appendChild(tr);
+        }
+    };
+    (async () => {
+        await refreshAuthorsList();
+
+        let newAuthorNameElem = document.querySelector("#newAuthorName");
+        let createAuthorButton = document.querySelector("#createAuthorButton");
+        createAuthorButton.addEventListener("click", () => {
+            let newName = newAuthorName.value;
+            console.log(newName);
+            (async () => {
+                let authToken = localStorage.getItem("authToken");
+                let response = await fetch(
+                    "http://localhost:8000/authors/",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${authToken}`,
+                        },
+                        body: JSON.stringify(
+                            {
+                                name: newName,
+                            }
+                        ),
+                    }
+                );
+                location.reload();
+            })();
+        });
+    })();
+    function deleteAuthor(authorId) {
+        (async () => {
+            console.log("Delete author " + authorId);
+            let authToken = localStorage.getItem("authToken");
+            let response = await fetch(
+                `http://localhost:8000/authors/${authorId}`,
+                {
+                    method: "DELETE",
+                    headers: {
+                        "Authorization": `Bearer ${authToken}`,
+                    },
+                }
+            );
+            location.reload();
+        })();
+    }
+</script>
+
+</body>
+</html>

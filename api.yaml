@@ -331,6 +331,24 @@ paths:
                 - id: "5678"
                   name: "Jane Smith"
   /authors/{authorId}:
+    get:
+      tags:
+        - "Authors"
+      summary: "Get an author by ID"
+      parameters:
+        - $ref: "#/components/parameters/AuthorIdInPath"
+      responses:
+        200:
+          description: "An author"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthorShort"
+              example:
+                id: "1234"
+                name: "John Doe"
+        404:
+          description: "Author not found"
     put:
       tags:
         - "Authors"
@@ -450,9 +468,9 @@ paths:
         404:
           description: "Author not found"
 tags:
-  - name: "News"
-  - name: "Drafts"
   - name: "Authors"
+  - name: "Drafts"
+  - name: "News"
 components:
   schemas:
     NewsShort:

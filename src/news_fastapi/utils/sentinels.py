@@ -60,6 +60,9 @@ class _UndefinedType(Enum):
         )
         return False
 
+    def __hash__(self) -> int:
+        return id(_UndefinedType.UNDEFINED)
+
 
 Undefined = _UndefinedType.UNDEFINED
 UndefinedType = Literal[_UndefinedType.UNDEFINED]

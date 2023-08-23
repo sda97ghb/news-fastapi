@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>News Details</title>
+</head>
+<body>
+
+<a href="/">Index</a>
+<a href="/news-list.html">News List</a>
+
+<article>
+    <h1 id="header"></h1>
+    <section>
+        <ul>
+            <li><strong>ID:</strong> <span id="id"></span></li>
+            <li><strong>Date published:</strong> <span id="datePublished"></span></li>
+            <li><strong>Author:</strong> <span id="author"></span></li>
+        </ul>
+        <p id="text"></p>
+    </section>
+</article>
+
+<script>
+    (async () => {
+        let newsId = new URLSearchParams(window.location.search).get("news_id");
+        let response = await fetch(`http://localhost:8000/news/${newsId}`);
+        let data = await response.json();
+        console.log(data);
+
+        let headerElem = document.querySelector("#header");
+        headerElem.innerText = data.headline;
+
+        let idElem = document.querySelector("#id");
+        idElem.innerText = data.id;
+
+        let datePublishedElem = document.querySelector("#datePublished");
+        datePublishedElem.innerText = data.datePublished;
+
+        let textElem = document.querySelector("#text");
+        textElem.innerText = data.text;
+
+        let authorElem = document.querySelector("#author");
+        authorElem.innerText = `${data.author.id} ${data.author.name}`;
+    })();
+</script>
+
+</body>
+</html>

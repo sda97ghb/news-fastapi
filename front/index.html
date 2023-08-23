@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Index</title>
+</head>
+<body>
+
+<ul>
+    <li><a href="/authors-list.html">Authors List</a></li>
+    <li><a href="/news-list.html">News List</a></li>
+    <li><a href="/news-details.html">News Details (don't forget to set query parameter news_id)</a></li>
+</ul>
+
+<label for="newAuthToken">New auth token:</label>
+<input id="newAuthToken">
+<button id="updateAuthTokenButton">Update Auth Token</button>
+
+<script>
+    let newAuthTokenElem = document.querySelector("#newAuthToken");
+    let updateAuthTokenButton = document.querySelector("#updateAuthTokenButton");
+    updateAuthTokenButton.addEventListener("click", () => {
+        let newAuthToken = newAuthTokenElem.value;
+        localStorage.setItem("authToken", newAuthToken);
+    });
+</script>
+
+</body>
+</html>

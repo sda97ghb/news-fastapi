@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections.abc import Collection
 from datetime import datetime as DateTime
 from typing import Protocol, runtime_checkable
 
@@ -60,6 +61,10 @@ class DraftRepository(ABC):
 
     @abstractmethod
     async def get_not_published_draft_by_news_id(self, news_article_id: str) -> Draft:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_drafts_for_author(self, author_id: str) -> Collection[Draft]:
         raise NotImplementedError
 
     @abstractmethod

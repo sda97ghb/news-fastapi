@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>News List</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            padding: 10px;
+        }
+        table {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        th {
+            border: 1px solid black;
+            padding: 10px;
+        }
+        td {
+            border: 1px solid black;
+            padding: 10px;
+        }
+        ul {
+            list-style-position: inside;
+        }
+    </style>
+</head>
+<body>
+
+<a href="/">Index</a>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Date</th>
+            <th>Info</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="newsList">
+    </tbody>
+</table>
+
+<script>
+    (async () => {
+        let response = await fetch("http://localhost:8000/news/");
+        let data = await response.json();
+        console.log(data);
+
+        let newsList = document.querySelector("#newsList");
+        for (let news_article of data) {
+            console.log(news_article);
+            let tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${news_article.id}</td>
+                <td>${news_article.datePublished}</td>
+                <td>
+                    <ul>
+                        <li><strong>Headline:</strong> ${news_article.headline}</li>
+                        <li><strong>Author:</strong> ${news_article.author.id} ${news_article.author.name}</li>
+                    </ul>
+                </td>
+                <td>
+                    <a href="/news-details.html?news_id=${news_article.id}">Details</a>
+                </td>
+            `;
+            newsList.appendChild(tr);
+        }
+    })();
+</script>
+
+</body>
+</html>
