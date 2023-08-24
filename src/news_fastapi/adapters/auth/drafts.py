@@ -1,5 +1,6 @@
 from news_fastapi.adapters.auth.jwt import BaseJWTAuth
 from news_fastapi.core.drafts.auth import DraftsAuth
+from news_fastapi.core.exceptions import AuthenticationError
 
 
 class SuperuserDraftsAuth(DraftsAuth):
@@ -22,7 +23,7 @@ class SuperuserDraftsAuth(DraftsAuth):
         return True
 
     def get_current_user_id(self) -> str:
-        raise TypeError("Superuser is not a concrete user and has not ID")
+        raise AuthenticationError("Superuser is not a concrete user and has not ID")
 
 
 class JWTDraftsAuth(DraftsAuth, BaseJWTAuth):

@@ -4,7 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
-from starlette.status import HTTP_201_CREATED, HTTP_409_CONFLICT
+from starlette.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT, HTTP_409_CONFLICT
 
 from news_fastapi.adapters.rest_api.models import AuthorShort
 from news_fastapi.core.authors.auth import AuthorsAuth
@@ -16,6 +16,83 @@ from news_fastapi.core.authors.services import (
 )
 
 router = APIRouter()
+
+
+class GetDefaultAuthorResponseModel(BaseModel):
+    author: AuthorShort | None
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+@router.get(
+    "/default",
+    response_model=GetDefaultAuthorResponseModel,
+    tags=["Authors"],
+    summary="Default author for user",
+)
+@inject
+async def get_default_author(
+    user_id: Annotated[
+        str | None,
+        Query(
+            description=(
+                "ID of the user for which need to know default author. "
+                "If this parameter is not set or is set to null, "
+                "current user's ID will be used"
+            ),
+            examples=["1234"],
+            alias="userId",
+        ),
+    ] = None,
+    authors_auth: AuthorsAuth = Depends(Provide["authors_auth"]),
+    default_authors_service: DefaultAuthorsService = Depends(
+        Provide["default_authors_service"]
+    ),
+):
+    if not user_id:
+        user_id = authors_auth.get_current_user_id()
+    author = await default_authors_service.get_default_author(user_id)
+    return GetDefaultAuthorResponseModel(
+        author=AuthorShort(id=author.id, name=author.name) if author else None
+    )
+
+
+@router.put(
+    "/default",
+    tags=["Authors"],
+    summary="Set default author for user",
+    status_code=HTTP_204_NO_CONTENT,
+)
+@inject
+async def set_default_author(
+    author_id: Annotated[
+        str | None,
+        Body(
+            embed=True, examples=["1234"], alias="authorId", validation_alias="authorId"
+        ),
+    ],
+    user_id: Annotated[
+        str | None,
+        Body(
+            embed=True,
+            description=(
+                "ID of the user for which need to set default author. "
+                "If this parameter is not set or is set to null, "
+                "current user's ID will be used"
+            ),
+            examples=["1234"],
+            alias="userId",
+            validation_alias="userId",
+        ),
+    ] = None,
+    authors_auth: AuthorsAuth = Depends(Provide["authors_auth"]),
+    default_authors_service: DefaultAuthorsService = Depends(
+        Provide["default_authors_service"]
+    ),
+):
+    if not user_id:
+        user_id = authors_auth.get_current_user_id()
+    await default_authors_service.set_default_author(user_id, author_id)
 
 
 class CreateAuthorResponseModel(BaseModel):
@@ -112,77 +189,3 @@ async def delete_author(
         await authors_service.delete_author(author_id=author_id)
     except DeleteAuthorError as err:
         raise HTTPException(status_code=HTTP_409_CONFLICT, detail=str(err)) from err
-
-
-class GetDefaultAuthorResponseModel(BaseModel):
-    author: AuthorShort
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-@router.get(
-    "/default",
-    response_model=GetDefaultAuthorResponseModel,
-    tags=["Authors"],
-    summary="Default author for user",
-)
-@inject
-async def get_default_author(
-    user_id: Annotated[
-        str | None,
-        Query(
-            description=(
-                "ID of the user for which need to know default author. "
-                "If this parameter is not set or is set to null, "
-                "current user's ID will be used"
-            ),
-            examples=["1234"],
-            alias="userId",
-        ),
-    ],
-    authors_auth: AuthorsAuth = Depends(Provide["authors_auth"]),
-    default_authors_service: DefaultAuthorsService = Depends(
-        Provide["default_authors_service"]
-    ),
-):
-    if not user_id:
-        user_id = authors_auth.get_current_user_id()
-    author = await default_authors_service.get_default_author(user_id)
-    return {"author": {"id": author.id, "name": author.name} if author else None}
-
-
-@router.put(
-    "/default",
-    tags=["Authors"],
-    summary="Set default author for user",
-)
-@inject
-async def set_default_author(
-    user_id: Annotated[
-        str | None,
-        Body(
-            embed=True,
-            description=(
-                "ID of the user for which need to set default author. "
-                "If this parameter is not set or is set to null, "
-                "current user's ID will be used"
-            ),
-            examples=["1234"],
-            alias="userId",
-            validation_alias="userId",
-        ),
-    ],
-    author_id: Annotated[
-        str | None,
-        Body(
-            embed=True, examples=["1234"], alias="authorId", validation_alias="authorId"
-        ),
-    ],
-    authors_auth: AuthorsAuth = Depends(Provide["authors_auth"]),
-    default_authors_service: DefaultAuthorsService = Depends(
-        Provide["default_authors_service"]
-    ),
-):
-    if not user_id:
-        user_id = authors_auth.get_current_user_id()
-    await default_authors_service.set_default_author(user_id, author_id)

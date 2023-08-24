@@ -26,6 +26,14 @@
         ul {
             list-style-position: inside;
         }
+        .mt-10 {
+            margin-top: 10px;
+        }
+        .box {
+            border: 1px solid black;
+            padding: 10px;
+            width:fit-content;
+        }
     </style>
 </head>
 <body>
@@ -44,10 +52,19 @@
     </tbody>
 </table>
 
-<div>
+<div class="box mt-10">
     <label for="newAuthorName">New author name:</label>
     <input id="newAuthorName">
     <button id="createAuthorButton">Create author</button>
+</div>
+
+<div class="box mt-10">
+    <p>
+        <strong>Current default author:</strong> <span id="defaultAuthor"></span>
+    </p>
+    <label for="newDefaultAuthorId">New default author ID:</label>
+    <input id="newDefaultAuthorId">
+    <button id="setDefaultAuthorButton">Set default author</button>
 </div>
 
 <script>
@@ -69,6 +86,7 @@
                 <td>
                     <a href="/edit-author.html?author_id=${author.id}">Edit</a>
                     <a href="#" onclick="deleteAuthor('${author.id}')">Delete</a>
+                    <a href="#" onclick="setDefaultAuthorId('${author.id}')">Set as default</a>
                 </td>
             `;
             authorsList.appendChild(tr);
@@ -101,6 +119,51 @@
                 );
                 location.reload();
             })();
+        });
+    })();
+    const setDefaultAuthorId = async (newDefaultAuthorId) => {
+        let authToken = localStorage.getItem("authToken");
+        let response = await fetch(
+            "http://localhost:8000/authors/default",
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${authToken}`,
+                },
+                body: JSON.stringify(
+                    {
+                        authorId: newDefaultAuthorId,
+                    }
+                ),
+            },
+        );
+        location.reload();
+    };
+    (async () => {
+        let authToken = localStorage.getItem("authToken");
+        let response = await fetch("http://localhost:8000/authors/default", {
+            headers: {
+                "Authorization": `Bearer ${authToken}`,
+            },
+        });
+        let data = await response.json();
+        console.log(data);
+
+        let defaultAuthorElem = document.querySelector("#defaultAuthor");
+        defaultAuthorElem.innerText = (
+            data.author
+            ? `${data.author.id} ${data.author.name}`
+            : "not set"
+        );
+
+        let newDefaultAuthorIdElem = document.querySelector("#newDefaultAuthorId");
+
+        let setDefaultAuthorButton = document.querySelector("#setDefaultAuthorButton");
+        setDefaultAuthorButton.addEventListener("click", () => {
+            let newDefaultAuthorId = newDefaultAuthorIdElem.value;
+            console.log("Set new default author id " + newDefaultAuthorId);
+            setDefaultAuthorId(newDefaultAuthorId);
         });
     })();
     function deleteAuthor(authorId) {

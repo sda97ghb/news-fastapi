@@ -1,5 +1,6 @@
 from news_fastapi.adapters.auth.jwt import BaseJWTAuth
 from news_fastapi.core.authors.auth import AuthorsAuth
+from news_fastapi.core.exceptions import AuthenticationError
 
 
 class SuperuserAuthorsAuth(AuthorsAuth):
@@ -13,7 +14,7 @@ class SuperuserAuthorsAuth(AuthorsAuth):
         return True
 
     def get_current_user_id(self) -> str:
-        raise TypeError("Superuser is not a concrete user and has no ID")
+        raise AuthenticationError("Superuser is not a concrete user and has no ID")
 
 
 class JWTAuthorsAuth(AuthorsAuth, BaseJWTAuth):
@@ -41,4 +42,4 @@ class AnonymousAuthorsAuth(AuthorsAuth):
         return False
 
     def get_current_user_id(self) -> str:
-        raise TypeError("Anonymous user is not a concrete user and has no ID")
+        raise AuthenticationError("Anonymous user is not a concrete user and has no ID")

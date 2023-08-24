@@ -102,4 +102,8 @@ class TortoiseDefaultAuthorRepository(DefaultAuthorRepository):
         if author_id is None:
             await DefaultAuthor.filter(user_id=user_id).delete()
         else:
-            await DefaultAuthor.filter(user_id=user_id).update(author_id=author_id)
+            default_author = await DefaultAuthor.get_or_none(user_id=user_id)
+            if default_author is None:
+                default_author = DefaultAuthor(user_id=user_id)
+            default_author.author_id = author_id
+            await default_author.save()
