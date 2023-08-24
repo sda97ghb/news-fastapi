@@ -1,7 +1,12 @@
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 
-from news_fastapi.adapters.rest_api.authors.models import AuthorShort
+
+class AuthorShort(BaseModel):
+    id: str
+    name: str
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
 class NewsShort(BaseModel):

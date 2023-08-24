@@ -52,20 +52,20 @@
         console.log(data);
 
         let newsList = document.querySelector("#newsList");
-        for (let news_article of data) {
-            console.log(news_article);
+        for (let newsArticle of data) {
+            console.log(newsArticle);
             let tr = document.createElement("tr");
             tr.innerHTML = `
-                <td>${news_article.id}</td>
-                <td>${news_article.datePublished}</td>
+                <td>${newsArticle.id}</td>
+                <td>${newsArticle.datePublished}</td>
                 <td>
                     <ul>
-                        <li><strong>Headline:</strong> ${news_article.headline}</li>
-                        <li><strong>Author:</strong> ${news_article.author.id} ${news_article.author.name}</li>
+                        <li><strong>Headline:</strong> ${newsArticle.headline}</li>
+                        <li><strong>Author:</strong> ${newsArticle.author.id} ${newsArticle.author.name}</li>
                     </ul>
                 </td>
                 <td>
-                    <a href="/news-details.html?news_id=${news_article.id}">Details</a>
+                    <a href="/news-details.html?news_id=${newsArticle.id}">Details</a>
                 </td>
             `;
             newsList.appendChild(tr);

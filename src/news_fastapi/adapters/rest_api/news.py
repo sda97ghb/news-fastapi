@@ -4,8 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Body, Depends, Path, Query
 from starlette.status import HTTP_204_NO_CONTENT
 
-from news_fastapi.adapters.rest_api.authors.models import AuthorShort
-from news_fastapi.adapters.rest_api.news.models import NewsLong, NewsShort
+from news_fastapi.adapters.rest_api.models import AuthorShort, NewsLong, NewsShort
 from news_fastapi.core.news.services import NewsListService, NewsService
 
 router = APIRouter()
@@ -48,7 +47,7 @@ async def get_news_list(
 
 
 @router.get(
-    "/{news_article_id}",
+    "/{newsArticleId}",
     response_model=NewsLong,
     tags=["News"],
     summary="Get single news article by ID",
@@ -56,7 +55,12 @@ async def get_news_list(
 @inject
 async def get_news_article(
     news_article_id: Annotated[
-        str, Path(description="ID of the news article", examples=["1234"])
+        str,
+        Path(
+            description="ID of the news article",
+            examples=["1234"],
+            alias="newsArticleId",
+        ),
     ],
     news_service: NewsService = Depends(Provide["news_service"]),
 ):
@@ -74,7 +78,7 @@ async def get_news_article(
 
 
 @router.post(
-    "/{newsId}/revoke",
+    "/{newsArticleId}/revoke",
     status_code=HTTP_204_NO_CONTENT,
     tags=["News"],
     summary="Revoke the news article, i.e. hide it",
@@ -82,7 +86,12 @@ async def get_news_article(
 @inject
 async def revoke_news_article(
     news_article_id: Annotated[
-        str, Path(description="ID of the news article", examples=["1234"])
+        str,
+        Path(
+            description="ID of the news article",
+            examples=["1234"],
+            alias="newsArticleId",
+        ),
     ],
     reason: Annotated[
         str,

@@ -13,9 +13,9 @@ from starlette.status import (
 from tortoise import Tortoise
 
 from news_fastapi.adapters.auth.http_request import RequestHolder
-from news_fastapi.adapters.rest_api.authors.endpoints import router as authors_router
-from news_fastapi.adapters.rest_api.drafts.endpoints import router as drafts_router
-from news_fastapi.adapters.rest_api.news.endpoints import router as news_router
+from news_fastapi.adapters.rest_api.authors import router as authors_router
+from news_fastapi.adapters.rest_api.drafts import router as drafts_router
+from news_fastapi.adapters.rest_api.news import router as news_router
 from news_fastapi.core.exceptions import AuthenticationError, AuthorizationError
 from news_fastapi.domain.events.server import DomainEventServer
 from news_fastapi.main.container import DIContainer
