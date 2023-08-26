@@ -56,6 +56,14 @@ class DraftRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def get_drafts_list(
+        self,
+        offset: int = 0,
+        limit: int = 10,
+    ) -> Collection[Draft]:
+        raise NotImplementedError
+
+    @abstractmethod
     async def get_draft_by_id(self, draft_id: str) -> Draft:
         raise NotImplementedError
 

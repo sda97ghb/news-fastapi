@@ -105,10 +105,12 @@ paths:
                   newsArticleId: "2097f31a-e2ef-4fe4-897d-0a17930f9997"
                   headline: "14 Reasons You Can Blame the Recession on Cat Dresses"
                   createByUserId: "9059db82-164c-4a3f-a5a7-1b09f6df654d"
+                  isPublished: false
                 - id: "19a402a1-97c5-4d9d-900d-1cdc1f790b12"
                   newsArticleId: "b7983653-a4e8-4d65-94e6-90e6fad2fd6a"
                   headline: "How to Master Cat Dresses in 30 Days"
                   createByUserId: "0bcb5c59-e414-4fa2-ba31-1016b7f0dd96"
+                  isPublished: false
     post:
       tags:
         - "Drafts"
@@ -264,7 +266,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/DraftIdInPath"
       responses:
-        204:
+        200:
           description: "The draft is successfully published"
           content:
             application/json:
@@ -281,6 +283,27 @@ paths:
           description: "User can't publish drafts"
         404:
           description: "Draft not found"
+        409:
+          description: "Some requirements are not satisfied, can't publish"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  problems:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                        userMessage:
+                          type: string
+                      required:
+                        - message
+                        - userMessage
+                required:
+                  - problems
   /authors:
     get:
       tags:
@@ -373,7 +396,7 @@ paths:
             example:
               name: "John Doe"
       responses:
-        200:
+        204:
           description: "Author updated successfully"
         403:
           description: "User can't manage authors"
@@ -466,7 +489,7 @@ paths:
                   userId: "6beaf485-3663-494b-891f-7d769543f048"
                   authorId: "3aedc76d-65f7-4120-9cec-a15bed00b274"
       responses:
-        200:
+        204:
           description: "Default author set successfully"
         403:
           description: "User can't manage default authors"
@@ -530,6 +553,7 @@ components:
           type: string
         newsArticleId:
           type: string
+          nullable: true
         headline:
           type: string
         createByUserId:
