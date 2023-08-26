@@ -7,73 +7,63 @@ paths:
     get:
       tags:
         - "News"
-      summary: "Get a list of news"
+      summary: "Get a list of news articles"
       parameters:
-        - name: "limit"
-          in: query
-          description: "How many news can be returned on one page of the list?"
-          schema:
-            type: integer
-          example: 10
-        - name: "offset"
-          in: query
-          description: "How many news should be skipped before the page?"
-          schema:
-            type: integer
-          example: 30
+        - $ref: "#/components/parameters/LimitInQuery"
+        - $ref: "#/components/parameters/OffsetInQuery"
       responses:
         200:
-          description: "List of news"
+          description: "List of news articles"
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/NewsShort"
+                  $ref: "#/components/schemas/NewsArticlesListItem"
               example:
-                - id: "1"
-                  headline: "News 1"
+                - id: "1de0f659-eac6-4ca6-9a84-5812b7e43b0d"
+                  headline: "6 Surprising Elon Musk Opinions on Cat Dresses"
                   datePublished: "2022-01-01T15:00:00+0000"
                   author:
-                    id: "1"
+                    id: "ab82bcea-f04e-45f9-8b4f-9645a5a401a0"
                     name: "John Doe"
-                - id: "2"
-                  headline: "News 2"
+                - id: "f701740c-4f6b-4ddb-a567-741d8aae23ba"
+                  headline: "Cat Dresses: Dos and Don'ts"
                   datePublished: "2022-01-01T17:00:00+0000"
                   author:
-                    id: "2"
+                    id: "6da7e3d0-3e4b-4125-a087-d64b77fe8ba8"
                     name: "Jane Smith"
-  /news/{newsId}:
+  /news/{newsArticleId}:
     get:
       tags:
         - "News"
       summary: "Get single news article by ID"
       parameters:
-        - $ref: "#/components/parameters/NewsIdInPath"
+        - $ref: "#/components/parameters/NewsArticleIdInPath"
       responses:
         200:
           description: "A news article"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/NewsLong"
+                $ref: "#/components/schemas/NewsArticle"
               example:
-                id: "1"
-                headline: "News 1"
+                id: "5149fec6-db96-446a-8c8a-f3414606e182"
+                headline: "10 Cat Dresses Products Under $20 That Reviewers Love"
                 datePublished: "2022-01-01T15:00:00+0000"
                 author:
-                  id: "1"
+                  id: "6d521306-ba9d-4503-ba9f-1ef9c800db3c"
                   name: "John Doe"
                 text: "Full text of the news article"
         404:
-          description: "News not found"
-  /news/{newsId}/revoke:
+          description: "News article not found"
+  /news/{newsArticleId}/revoke:
     post:
       tags:
         - "News"
       summary: "Revoke the news article, i.e. hide it"
       parameters:
-        - $ref: "#/components/parameters/NewsIdInPath"
+        - $ref: "#/components/parameters/NewsArticleIdInPath"
       requestBody:
         content:
           application/json:
@@ -92,8 +82,33 @@ paths:
         403:
           description: "User has no permission of revoking a news article"
         404:
-          description: "News not found"
+          description: "News article not found"
   /drafts:
+    get:
+      tags:
+        - "Drafts"
+      summary: "Get a list of drafts"
+      parameters:
+        - $ref: "#/components/parameters/LimitInQuery"
+        - $ref: "#/components/parameters/OffsetInQuery"
+      responses:
+        200:
+          description: "List of drafts"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DraftsListItem"
+              example:
+                - id: "cd1169f4-7765-4f13-b8d4-2c0d7f0662e1"
+                  newsArticleId: "2097f31a-e2ef-4fe4-897d-0a17930f9997"
+                  headline: "14 Reasons You Can Blame the Recession on Cat Dresses"
+                  createByUserId: "9059db82-164c-4a3f-a5a7-1b09f6df654d"
+                - id: "19a402a1-97c5-4d9d-900d-1cdc1f790b12"
+                  newsArticleId: "b7983653-a4e8-4d65-94e6-90e6fad2fd6a"
+                  headline: "How to Master Cat Dresses in 30 Days"
+                  createByUserId: "0bcb5c59-e414-4fa2-ba31-1016b7f0dd96"
     post:
       tags:
         - "Drafts"
@@ -104,18 +119,18 @@ paths:
             schema:
               type: object
               properties:
-                newsId:
+                newsArticleId:
                   type: string
                   nullable: true
               required:
-                - newsId
+                - newsArticleId
             examples:
               "Create a draft from scratch":
                 value:
-                  newsId: null
+                  newsArticleId: null
               "Create a draft for a news article":
                 value:
-                  newsId: "1234"
+                  newsArticleId: "3ac7d6f2-dc9a-4657-8a45-f761bde612e9"
         required: true
       responses:
         200:
@@ -130,7 +145,7 @@ paths:
                 required:
                   - draftId
               example:
-                draftId: "1234"
+                draftId: "ba95c9bf-59f7-4a7f-b5d4-3b87e36b5e61"
         403:
           description: "User can't manage drafts"
         409:
@@ -155,14 +170,14 @@ paths:
                 "For admin user":
                   description: "Since admin user can delete any draft to release locked editor, draftId is returned."
                   value:
-                    draftId: "1234"
+                    draftId: "2b62cac3-c77a-44f9-a699-842654131ba7"
                     createdBy:
-                      userId: "1111"
+                      userId: "381e9d82-45b7-441c-af6e-d1536289944a"
                 "For any other user":
                   description: "Non admin users can't manage drafts created by another users. Because of this there is no need to return draftId."
                   value:
                     createdBy:
-                      userId: "1111"
+                      userId: "de2c5cff-74ee-4eef-990a-9ad2c6ec0c70"
   /drafts/{draftId}:
     get:
       tags:
@@ -176,14 +191,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DraftLong"
+                $ref: "#/components/schemas/Draft"
               example:
-                id: "1234"
-                newsId: "1234"
-                headline: "News 1"
+                id: "11f53a27-a677-4c9a-9c8b-ee45ece37d02"
+                newsArticleId: "34f528c2-de03-4d35-a189-96d81d857c39"
+                headline: "Top 15 Online Courses to Get Ahead in Cat Dresses"
                 datePublished: "2022-01-01T15:00:00+0000"
                 author:
-                  id: "1234"
+                  id: "84a6a8f1-cd1d-44fd-8279-b4f574236743"
                   name: "John Doe"
                 text: "Full text of the news article"
         403:
@@ -217,9 +232,9 @@ paths:
                 - authorId
                 - text
             example:
-              headline: "News 1"
+              headline: "The Ultimate Cat Dresses Checklist"
               datePublished: "2022-01-01T15:00:00+0000"
-              authorId: "1234"
+              authorId: "e2dac36e-4e61-4266-b888-b69741c10584"
               text: "Full text of the news article"
       responses:
         204:
@@ -256,12 +271,12 @@ paths:
               schema:
                 type: object
                 properties:
-                  newsId:
+                  newsArticleId:
                     type: string
                 required:
-                  - newsId
+                  - newsArticleId
               example:
-                newsId: "1234"
+                newsArticleId: "feca82f7-b268-446c-b7e0-e710a7e2ac51"
         403:
           description: "User can't publish drafts"
         404:
@@ -296,7 +311,7 @@ paths:
                 required:
                   - authorId
               example:
-                authorId: "1234"
+                authorId: "a32dc42c-c328-4917-bb54-df0ae0785614"
         403:
           description: "User can't manage authors"
     get:
@@ -304,18 +319,8 @@ paths:
         - "Authors"
       summary: "List authors"
       parameters:
-        - name: "limit"
-          in: query
-          description: "How many items fit on one page?"
-          schema:
-            type: integer
-          example: 50
-        - name: "offset"
-          in: query
-          description: "How many items should be skipped before the page?"
-          schema:
-            type: integer
-          example: 150
+        - $ref: "#/components/parameters/LimitInQuery"
+        - $ref: "#/components/parameters/OffsetInQuery"
       responses:
         200:
           description: "List of authors"
@@ -324,11 +329,11 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/AuthorShort"
+                  $ref: "#/components/schemas/Author"
               example:
-                - id: "1234"
+                - id: "8a8f776e-5f83-4265-b958-d85f50ed916c"
                   name: "John Doe"
-                - id: "5678"
+                - id: "4f6823f6-e47b-4fa2-a966-ab6271451438"
                   name: "Jane Smith"
   /authors/{authorId}:
     get:
@@ -343,9 +348,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthorShort"
+                $ref: "#/components/schemas/Author"
               example:
-                id: "1234"
+                id: "2fdca7cb-7818-4110-ad54-b54e07f9ea2a"
                 name: "John Doe"
         404:
           description: "Author not found"
@@ -401,7 +406,7 @@ paths:
           schema:
             type: string
             nullable: true
-          example: "1234"
+          example: "66189e9c-3058-4477-87ad-548603608c84"
       responses:
         200:
           description: "Default author for the user"
@@ -430,7 +435,7 @@ paths:
                 "Default author is set":
                   value:
                     author:
-                      id: "1234"
+                      id: "c5d0c70c-bcd9-4b1d-8d61-6d6a548556af"
                       name: "John Doe"
     put:
       tags:
@@ -455,11 +460,11 @@ paths:
               "For current user":
                 value:
                   userId: null
-                  authorId: "1234"
+                  authorId: "99bfd03c-40e4-416b-9d49-b5db31ec0fda"
               "For any user":
                 value:
-                  userId: "1234"
-                  authorId: "1234"
+                  userId: "6beaf485-3663-494b-891f-7d769543f048"
+                  authorId: "3aedc76d-65f7-4120-9cec-a15bed00b274"
       responses:
         200:
           description: "Default author set successfully"
@@ -473,7 +478,7 @@ tags:
   - name: "News"
 components:
   schemas:
-    NewsShort:
+    NewsArticlesListItem:
       type: object
       properties:
         id:
@@ -483,13 +488,13 @@ components:
         datePublished:
           type: string
         author:
-          $ref: "#/components/schemas/AuthorShort"
+          $ref: "#/components/schemas/Author"
       required:
         - id
         - headline
         - datePublished
         - author
-    NewsLong:
+    NewsArticle:
       type: object
       properties:
         id:
@@ -499,7 +504,7 @@ components:
         datePublished:
           type: string
         author:
-          $ref: "#/components/schemas/AuthorShort"
+          $ref: "#/components/schemas/Author"
         text:
           type: string
       required:
@@ -508,7 +513,7 @@ components:
         - datePublished
         - author
         - text
-    AuthorShort:
+    Author:
       type: object
       properties:
         id:
@@ -518,12 +523,28 @@ components:
       required:
         - id
         - name
-    DraftLong:
+    DraftsListItem:
       type: object
       properties:
         id:
           type: string
-        newsId:
+        newsArticleId:
+          type: string
+        headline:
+          type: string
+        createByUserId:
+          type: string
+      required:
+        - id
+        - newsArticleId
+        - headline
+        - createByUserId
+    Draft:
+      type: object
+      properties:
+        id:
+          type: string
+        newsArticleId:
           type: string
         headline:
           type: string
@@ -540,19 +561,19 @@ components:
           type: string
       required:
         - id
-        - newsId
+        - newsArticleId
         - headline
         - datePublished
         - author
   parameters:
-    NewsIdInPath:
-      name: "newsId"
+    NewsArticleIdInPath:
+      name: "newsArticleId"
       in: path
       description: "ID of the news article"
       required: true
       schema:
         type: string
-      example: "1234"
+      example: "0a5f533f-83c9-4637-985f-645bc8bfe42b"
     DraftIdInPath:
       name: "draftId"
       in: path
@@ -560,7 +581,7 @@ components:
       required: true
       schema:
         type: string
-      example: "1234"
+      example: "f52d64c2-97b2-4723-a70e-9f2e6784c75a"
     AuthorIdInPath:
       name: "authorId"
       in: path
@@ -569,4 +590,18 @@ components:
       schema:
         type:
           string
-      example: "1234"
+      example: "49db2288-e874-4af6-bbcc-3b2de5d5fcd7"
+    LimitInQuery:
+      name: "limit"
+      in: query
+      description: "Max number of returned items, a.k.a. page size"
+      schema:
+        type: integer
+      example: 10
+    OffsetInQuery:
+      name: "offset"
+      in: query
+      description: "Skip that many items before beginning to return items"
+      schema:
+        type: integer
+      example: 30
