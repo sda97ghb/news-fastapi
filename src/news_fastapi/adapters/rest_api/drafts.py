@@ -14,8 +14,9 @@ from news_fastapi.adapters.rest_api.parameters import (
     LimitInQuery,
     OffsetInQuery,
 )
-from news_fastapi.core.drafts.exceptions import CreateDraftError, PublishDraftError
+from news_fastapi.core.drafts.exceptions import CreateDraftError
 from news_fastapi.core.drafts.services import DraftsListService, DraftsService
+from news_fastapi.domain.publish import DraftAlreadyPublishedError, InvalidDraftError
 
 router = APIRouter()
 
@@ -199,7 +200,9 @@ async def publish_draft(
 ) -> PublishDraftResponse | JSONResponse:
     try:
         news_article = await drafts_service.publish_draft(draft_id)
-    except PublishDraftError as err:
+    except DraftAlreadyPublishedError as err:
+        raise HTTPException(status_code=HTTP_409_CONFLICT, detail=str(err)) from err
+    except InvalidDraftError as err:
         return JSONResponse(
             {
                 "problems": [

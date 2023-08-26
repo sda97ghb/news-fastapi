@@ -3,11 +3,8 @@ from datetime import datetime as DateTime
 
 from news_fastapi.core.drafts.auth import DraftsAuth
 from news_fastapi.core.drafts.exceptions import (
-    AlreadyPublishedError,
     CreateDraftConflictError,
     CreateDraftError,
-    DraftValidationProblem,
-    PublishDraftError,
     UpdateDraftError,
 )
 from news_fastapi.core.transaction import TransactionManager
@@ -17,11 +14,8 @@ from news_fastapi.domain.authors import (
     DefaultAuthorRepository,
 )
 from news_fastapi.domain.drafts import Draft, DraftFactory, DraftRepository
-from news_fastapi.domain.news import (
-    NewsArticle,
-    NewsArticleFactory,
-    NewsArticleRepository,
-)
+from news_fastapi.domain.news import NewsArticle, NewsArticleRepository
+from news_fastapi.domain.publish import PublishService
 from news_fastapi.utils.exceptions import NotFoundError
 from news_fastapi.utils.sentinels import Undefined, UndefinedType
 
@@ -54,9 +48,9 @@ class DraftsService:
     _draft_factory: DraftFactory
     _draft_repository: DraftRepository
     _default_author_repository: DefaultAuthorRepository
-    _news_article_factory: NewsArticleFactory
     _news_article_repository: NewsArticleRepository
     _author_repository: AuthorRepository
+    _publish_service: PublishService
 
     def __init__(
         self,
@@ -65,18 +59,18 @@ class DraftsService:
         draft_factory: DraftFactory,
         draft_repository: DraftRepository,
         default_author_repository: DefaultAuthorRepository,
-        news_article_factory: NewsArticleFactory,
         news_article_repository: NewsArticleRepository,
         author_repository: AuthorRepository,
+        publish_service: PublishService,
     ) -> None:
         self._auth = auth
         self._transaction_manager = transaction_manager
         self._draft_factory = draft_factory
         self._draft_repository = draft_repository
         self._default_author_repository = default_author_repository
-        self._news_article_factory = news_article_factory
         self._news_article_repository = news_article_repository
         self._author_repository = author_repository
+        self._publish_service = publish_service
 
     async def create_draft(self, news_article_id: str | None) -> Draft:
         self._auth.check_create_draft()
@@ -167,90 +161,10 @@ class DraftsService:
             await self._draft_repository.delete(draft)
 
     async def publish_draft(self, draft_id: str) -> NewsArticle:
+        self._auth.check_publish_draft()
         async with self._transaction_manager.in_transaction():
-            draft = await self._draft_repository.get_draft_by_id(draft_id)
-            if draft.is_published:
-                raise AlreadyPublishedError("The draft is already published")
-            draft.is_published = True
-            await self._draft_repository.save(draft)
-            self._validate_draft(draft)
-            if draft.news_article_id is None:
-                news_article = await self._create_news_article_from_scratch(draft)
-            else:
-                news_article = (
-                    await self._news_article_repository.get_news_article_by_id(
-                        draft.news_article_id
-                    )
-                )
-                self._fill_news_article_from_draft(news_article, draft)
-                news_article.revoke_reason = None
-            await self._news_article_repository.save(news_article)
+            news_article = await self._publish_service.publish_draft(draft_id)
             return news_article
-
-    def _validate_draft(self, draft: Draft) -> None:
-        problems = []
-        if draft.is_published:
-            problems.append(
-                DraftValidationProblem(
-                    message="The draft is already published",
-                    user_message="Этот черновик уже был опубликован, создайте новый",
-                )
-            )
-        if len(draft.text.strip()) == 0:
-            problems.append(
-                DraftValidationProblem(
-                    message="Empty text",
-                    user_message="Текст не заполнен",
-                )
-            )
-        if len(draft.headline.strip()) == 0:
-            problems.append(
-                DraftValidationProblem(
-                    message="Empty headline",
-                    user_message="Заголовок не заполнен",
-                )
-            )
-        headline_length = len(draft.headline)
-        max_headline_length = 60
-        if headline_length > max_headline_length:
-            problems.append(
-                DraftValidationProblem(
-                    message="Too long headline",
-                    user_message=(
-                        f"Заголовок слишком длинный (сейчас {headline_length} "
-                        f"символов, должен быть не больше {max_headline_length} "
-                        "символов)"
-                    ),
-                )
-            )
-        if problems:
-            raise PublishDraftError(problems)
-
-    async def _create_news_article_from_scratch(self, draft: Draft) -> NewsArticle:
-        news_article_id = await self._news_article_repository.next_identity()
-        news_article = self._news_article_factory.create_news_article_from_scratch(
-            news_article_id=news_article_id,
-            headline=draft.headline,
-            date_published=self._pick_date_published(draft.date_published),
-            author_id=draft.author_id,
-            text=draft.text,
-        )
-        return news_article
-
-    def _fill_news_article_from_draft(
-        self, news_article: NewsArticle, draft: Draft
-    ) -> None:
-        news_article.headline = draft.headline
-        news_article.date_published = self._pick_date_published(draft.date_published)
-        news_article.author_id = draft.author_id
-        news_article.text = draft.text
-
-    def _pick_date_published(
-        self, date_published_from_draft: DateTime | None
-    ) -> DateTime:
-        if date_published_from_draft:
-            return date_published_from_draft
-        return DateTime.now()
 
     async def delete_drafts_of_author(self, author_id: str) -> None:
         async with self._transaction_manager.in_transaction():

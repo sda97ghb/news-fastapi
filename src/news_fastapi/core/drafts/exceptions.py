@@ -1,6 +1,3 @@
-from dataclasses import dataclass
-
-
 class CreateDraftError(Exception):
     pass
 
@@ -28,20 +25,3 @@ class UpdateDraftError(Exception):
 
 class DeleteDraftError(Exception):
     pass
-
-
-class AlreadyPublishedError(Exception):
-    pass
-
-
-@dataclass
-class DraftValidationProblem:
-    message: str
-    user_message: str
-
-
-class PublishDraftError(Exception):
-    problems: list[DraftValidationProblem]
-
-    def __init__(self, problems: list[DraftValidationProblem]) -> None:
-        self.problems = problems
