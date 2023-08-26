@@ -149,7 +149,7 @@ class DraftsService:
                     )
                 )
                 self._fill_news_article_from_draft(news_article, draft)
-                news_article.revoke_reason = ""
+                news_article.revoke_reason = None
             await self._news_article_repository.save(news_article)
             return news_article
 

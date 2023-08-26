@@ -13,7 +13,7 @@ class NewsArticle(Protocol):
     date_published: DateTime
     author_id: str
     text: str
-    revoke_reason: str
+    revoke_reason: str | None
 
 
 class NewsArticleFactory(ABC):
@@ -25,7 +25,7 @@ class NewsArticleFactory(ABC):
         date_published: DateTime,
         author_id: str,
         text: str,
-        revoke_reason: str,
+        revoke_reason: str | None,
     ) -> NewsArticle:
         raise NotImplementedError
 
@@ -43,7 +43,7 @@ class NewsArticleFactory(ABC):
             date_published=date_published,
             author_id=author_id,
             text=text,
-            revoke_reason="",
+            revoke_reason=None,
         )
 
 

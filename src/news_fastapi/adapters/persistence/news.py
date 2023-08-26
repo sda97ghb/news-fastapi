@@ -24,7 +24,7 @@ class NewsArticleDataclass:
     date_published: DateTime
     author_id: str
     text: str
-    revoke_reason: str
+    revoke_reason: str | None
 
     def __assert_implements_protocol(self) -> NewsArticle:
         # pylint: disable=unused-private-member
@@ -37,7 +37,7 @@ class TortoiseNewsArticle(Model):
     date_published: DateTime = DatetimeField()
     author_id: str = TextField()
     text: str = TextField()
-    revoke_reason: str = TextField()
+    revoke_reason: str | None = TextField(null=True)
 
     def __assert_implements_protocol(self) -> NewsArticle:
         # pylint: disable=unused-private-member
@@ -55,7 +55,7 @@ class TortoiseNewsArticleFactory(NewsArticleFactory):
         date_published: DateTime,
         author_id: str,
         text: str,
-        revoke_reason: str,
+        revoke_reason: str | None,
     ) -> NewsArticle:
         return TortoiseNewsArticle(
             id=news_article_id,
@@ -93,9 +93,9 @@ class TortoiseNewsArticleRepository(NewsArticleRepository):
         self, filter_: NewsArticleListFilter, queryset: QuerySet[TortoiseNewsArticle]
     ) -> QuerySet[TortoiseNewsArticle]:
         if filter_.revoked == "no_revoked":
-            queryset = queryset.filter(revoke_reason="")
+            queryset = queryset.filter(revoke_reason__isnull=True)
         elif filter_.revoked == "only_revoked":
-            queryset = queryset.filter(revoke_reason__not="")
+            queryset = queryset.filter(revoke_reason__isnull=False)
         return queryset
 
     async def get_news_article_by_id(self, news_article_id: str) -> NewsArticle:

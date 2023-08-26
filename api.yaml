@@ -282,6 +282,27 @@ paths:
         404:
           description: "Draft not found"
   /authors:
+    get:
+      tags:
+        - "Authors"
+      summary: "List authors"
+      parameters:
+        - $ref: "#/components/parameters/LimitInQuery"
+        - $ref: "#/components/parameters/OffsetInQuery"
+      responses:
+        200:
+          description: "List of authors"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Author"
+              example:
+                - id: "8a8f776e-5f83-4265-b958-d85f50ed916c"
+                  name: "John Doe"
+                - id: "4f6823f6-e47b-4fa2-a966-ab6271451438"
+                  name: "Jane Smith"
     post:
       tags:
         - "Authors"
@@ -314,27 +335,6 @@ paths:
                 authorId: "a32dc42c-c328-4917-bb54-df0ae0785614"
         403:
           description: "User can't manage authors"
-    get:
-      tags:
-        - "Authors"
-      summary: "List authors"
-      parameters:
-        - $ref: "#/components/parameters/LimitInQuery"
-        - $ref: "#/components/parameters/OffsetInQuery"
-      responses:
-        200:
-          description: "List of authors"
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Author"
-              example:
-                - id: "8a8f776e-5f83-4265-b958-d85f50ed916c"
-                  name: "John Doe"
-                - id: "4f6823f6-e47b-4fa2-a966-ab6271451438"
-                  name: "Jane Smith"
   /authors/{authorId}:
     get:
       tags:
@@ -478,22 +478,70 @@ tags:
   - name: "News"
 components:
   schemas:
-    NewsArticlesListItem:
+    Author:
       type: object
       properties:
         id:
           type: string
+        name:
+          type: string
+      required:
+        - id
+        - name
+    Draft:
+      type: object
+      properties:
+        id:
+          type: string
+        newsArticleId:
+          type: string
+          nullable: true
         headline:
           type: string
         datePublished:
           type: string
+          nullable: true
         author:
-          $ref: "#/components/schemas/Author"
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+        text:
+          type: string
+        createdByUserId:
+          type: string
+        isPublished:
+          type: boolean
       required:
         - id
+        - newsArticleId
         - headline
         - datePublished
         - author
+        - text
+        - createdByUserId
+        - isPublished
+    DraftsListItem:
+      type: object
+      properties:
+        id:
+          type: string
+        newsArticleId:
+          type: string
+        headline:
+          type: string
+        createByUserId:
+          type: string
+        isPublished:
+          type: boolean
+      required:
+        - id
+        - newsArticleId
+        - headline
+        - createByUserId
+        - isPublished
     NewsArticle:
       type: object
       properties:
@@ -507,64 +555,36 @@ components:
           $ref: "#/components/schemas/Author"
         text:
           type: string
+        revoke_reason:
+          type: string
+          nullable: true
       required:
         - id
         - headline
         - datePublished
         - author
         - text
-    Author:
+        - revoke_reason
+    NewsArticlesListItem:
       type: object
       properties:
         id:
-          type: string
-        name:
-          type: string
-      required:
-        - id
-        - name
-    DraftsListItem:
-      type: object
-      properties:
-        id:
-          type: string
-        newsArticleId:
-          type: string
-        headline:
-          type: string
-        createByUserId:
-          type: string
-      required:
-        - id
-        - newsArticleId
-        - headline
-        - createByUserId
-    Draft:
-      type: object
-      properties:
-        id:
-          type: string
-        newsArticleId:
           type: string
         headline:
           type: string
         datePublished:
           type: string
         author:
-          type: object
-          properties:
-            id:
-              type: string
-            name:
-              type: string
-        text:
+          $ref: "#/components/schemas/Author"
+        revoke_reason:
           type: string
+          nullable: true
       required:
         - id
-        - newsArticleId
         - headline
         - datePublished
         - author
+        - revoke_reason
   parameters:
     NewsArticleIdInPath:
       name: "newsArticleId"
