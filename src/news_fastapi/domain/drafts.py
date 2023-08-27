@@ -3,6 +3,8 @@ from collections.abc import Collection
 from datetime import datetime as DateTime
 from typing import Protocol, runtime_checkable
 
+from news_fastapi.domain.news import NewsArticle
+
 
 @runtime_checkable
 class Draft(Protocol):
@@ -41,6 +43,20 @@ class DraftFactory(ABC):
             date_published=None,
             author_id=author_id,
             text="",
+            created_by_user_id=user_id,
+            is_published=False,
+        )
+
+    def create_draft_from_news_article(
+        self, news_article: NewsArticle, draft_id: str, user_id: str
+    ) -> Draft:
+        return self.create_draft(
+            draft_id=draft_id,
+            news_article_id=news_article.id,
+            headline=news_article.headline,
+            date_published=news_article.date_published,
+            author_id=news_article.author_id,
+            text=news_article.text,
             created_by_user_id=user_id,
             is_published=False,
         )

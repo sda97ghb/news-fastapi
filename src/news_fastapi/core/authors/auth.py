@@ -33,5 +33,25 @@ class AuthorsAuth(ABC):
             )
 
     @abstractmethod
+    def can_get_default_author(self) -> bool:
+        raise NotImplementedError
+
+    def check_get_default_author(self) -> None:
+        if not self.can_get_default_author():
+            raise AuthorizationError(
+                "User doesn't have permission to get default author"
+            )
+
+    @abstractmethod
+    def can_set_default_author(self) -> bool:
+        raise NotImplementedError
+
+    def check_set_default_author(self) -> None:
+        if not self.can_set_default_author():
+            raise AuthorizationError(
+                "User doesn't have permission to set default author"
+            )
+
+    @abstractmethod
     def get_current_user_id(self) -> str:
         raise NotImplementedError

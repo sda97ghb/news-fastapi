@@ -25,6 +25,8 @@ def encode_test_jwt(claims: dict[str, Any] | None = None) -> str:
         "authors:create-author",
         "authors:update-author",
         "authors:delete-author",
+        "authors:get-default-author",
+        "authors:set-default-author",
         "drafts:manage",
         "drafts:delete-published",
         "drafts:publish",

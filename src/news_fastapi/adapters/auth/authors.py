@@ -13,6 +13,12 @@ class SuperuserAuthorsAuth(AuthorsAuth):
     def can_delete_author(self, author_id: str) -> bool:
         return True
 
+    def can_get_default_author(self) -> bool:
+        return True
+
+    def can_set_default_author(self) -> bool:
+        return True
+
     def get_current_user_id(self) -> str:
         raise AuthenticationError("Superuser is not a concrete user and has no ID")
 
@@ -27,6 +33,12 @@ class JWTAuthorsAuth(AuthorsAuth, BaseJWTAuth):
     def can_delete_author(self, author_id: str) -> bool:
         return "authors:delete-author" in self.permissions
 
+    def can_get_default_author(self) -> bool:
+        return "authors:get-default-author" in self.permissions
+
+    def can_set_default_author(self) -> bool:
+        return "authors:set-default-author" in self.permissions
+
     def get_current_user_id(self) -> str:
         return self.sub
 
@@ -39,6 +51,12 @@ class AnonymousAuthorsAuth(AuthorsAuth):
         return False
 
     def can_delete_author(self, author_id: str) -> bool:
+        return False
+
+    def can_get_default_author(self) -> bool:
+        return False
+
+    def can_set_default_author(self) -> bool:
         return False
 
     def get_current_user_id(self) -> str:

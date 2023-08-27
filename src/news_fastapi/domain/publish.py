@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime as DateTime
+from typing import Self
 
 from news_fastapi.domain.drafts import Draft, DraftRepository
 from news_fastapi.domain.news import (
@@ -15,61 +16,68 @@ class DraftValidationProblem:
     user_message: str
 
 
+@dataclass
+class EmptyHeadlineProblem(DraftValidationProblem):
+    message: str = "Empty headline"
+    user_message: str = "Заголовок не заполнен"
+
+
+@dataclass
+class TooLongHeadlineProblem(DraftValidationProblem):
+    current_length: int
+    max_length: int
+
+    @classmethod
+    def create(cls, current_length: int, max_length: int) -> Self:
+        return cls(
+            message="Too long headline",
+            user_message=(
+                f"Заголовок слишком длинный (сейчас {current_length} "
+                f"символов, должен быть не больше {max_length} "
+                "символов)"
+            ),
+            current_length=current_length,
+            max_length=max_length,
+        )
+
+
+@dataclass
+class EmptyTextProblem(DraftValidationProblem):
+    message: str = "Empty text"
+    user_message: str = "Текст не заполнен"
+
+
 class DraftValidator:
     _draft: Draft
     _problems: list[DraftValidationProblem]
+    _max_headline_length: int
 
-    def __init__(self, draft: Draft) -> None:
+    def __init__(self, draft: Draft, max_headline_length: int = 60) -> None:
         self._draft = draft
         self._problems = []
+        self._max_headline_length = max_headline_length
 
     def validate(self) -> list[DraftValidationProblem]:
         self._problems = []
-        self._validate_not_published()
         self._validate_headline()
         self._validate_text()
         return self._problems
-
-    def _validate_not_published(self) -> None:
-        if self._draft.is_published:
-            self._problems.append(
-                DraftValidationProblem(
-                    message="The draft is already published",
-                    user_message="Этот черновик уже был опубликован, создайте новый",
-                )
-            )
 
     def _validate_headline(self) -> None:
         headline = self._draft.headline.strip()
         headline_length = len(headline)
         if headline_length == 0:
+            self._problems.append(EmptyHeadlineProblem())
+        if headline_length > self._max_headline_length:
             self._problems.append(
-                DraftValidationProblem(
-                    message="Empty headline",
-                    user_message="Заголовок не заполнен",
-                )
-            )
-        max_headline_length = 60
-        if headline_length > max_headline_length:
-            self._problems.append(
-                DraftValidationProblem(
-                    message="Too long headline",
-                    user_message=(
-                        f"Заголовок слишком длинный (сейчас {headline_length} "
-                        f"символов, должен быть не больше {max_headline_length} "
-                        "символов)"
-                    ),
+                TooLongHeadlineProblem.create(
+                    current_length=headline_length, max_length=self._max_headline_length
                 )
             )
 
     def _validate_text(self) -> None:
         if len(self._draft.text.strip()) == 0:
-            self._problems.append(
-                DraftValidationProblem(
-                    message="Empty text",
-                    user_message="Текст не заполнен",
-                )
-            )
+            self._problems.append(EmptyTextProblem())
 
 
 class PublishDraftError(Exception):
@@ -85,6 +93,12 @@ class InvalidDraftError(Exception):
 
     def __init__(self, problems: list[DraftValidationProblem]) -> None:
         self.problems = problems
+
+
+def pick_date_published(date_published_from_draft: DateTime | None) -> DateTime:
+    if date_published_from_draft:
+        return date_published_from_draft
+    return DateTime.now()
 
 
 class PublishService:
@@ -132,7 +146,7 @@ class PublishService:
         news_article = self._news_article_factory.create_news_article_from_scratch(
             news_article_id=news_article_id,
             headline=draft.headline,
-            date_published=self._pick_date_published(draft.date_published),
+            date_published=pick_date_published(draft.date_published),
             author_id=draft.author_id,
             text=draft.text,
         )
@@ -152,13 +166,6 @@ class PublishService:
         self, news_article: NewsArticle, draft: Draft
     ) -> None:
         news_article.headline = draft.headline
-        news_article.date_published = self._pick_date_published(draft.date_published)
+        news_article.date_published = pick_date_published(draft.date_published)
         news_article.author_id = draft.author_id
         news_article.text = draft.text
-
-    def _pick_date_published(
-        self, date_published_from_draft: DateTime | None
-    ) -> DateTime:
-        if date_published_from_draft:
-            return date_published_from_draft
-        return DateTime.now()
