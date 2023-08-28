@@ -1,9 +1,8 @@
-from collections.abc import Collection, Mapping
-from dataclasses import dataclass
+from typing import Collection, Mapping
 from uuid import uuid4
 
 from tortoise import Model
-from tortoise.exceptions import DoesNotExist
+from tortoise.exceptions import DoesNotExist, IntegrityError
 from tortoise.fields import TextField
 
 from news_fastapi.domain.authors import (
@@ -13,21 +12,6 @@ from news_fastapi.domain.authors import (
     DefaultAuthorRepository,
 )
 from news_fastapi.utils.exceptions import NotFoundError
-
-
-@dataclass
-class AuthorDataclass:
-    id: str  # pylint: disable=invalid-name
-    name: str
-
-    def __assert_implements_protocol(self) -> Author:
-        # pylint: disable=unused-private-member
-        return self
-
-
-class DataclassesAuthorFactory(AuthorFactory):
-    def create_author(self, author_id: str, name: str) -> Author:
-        return AuthorDataclass(id=author_id, name=name)
 
 
 class TortoiseAuthor(Model):
@@ -60,6 +44,8 @@ class TortoiseAuthorRepository(AuthorRepository):
     async def get_authors_list(
         self, offset: int = 0, limit: int = 50
     ) -> Collection[Author]:
+        if offset < 0:
+            raise ValueError("Offset must be non-negative integer")
         return await TortoiseAuthor.all().offset(offset).limit(limit)
 
     async def get_authors_in_bulk(self, id_list: list[str]) -> Mapping[str, Author]:
@@ -67,7 +53,13 @@ class TortoiseAuthorRepository(AuthorRepository):
 
     async def save(self, author: Author) -> None:
         if isinstance(author, TortoiseAuthor):
-            await author.save()
+            try:
+                await author.save()
+            except IntegrityError:
+                if await TortoiseAuthor.exists(id=author.id):
+                    await TortoiseAuthor.filter(id=author.id).update(name=author.name)
+                else:
+                    raise
         else:
             raise ValueError(
                 "Tortoise based repository doesn't support saving of "
@@ -80,7 +72,7 @@ class TortoiseAuthorRepository(AuthorRepository):
                 "Tortoise based repository doesn't support removing of "
                 "not Tortoise based entities."
             )
-        await author.delete()
+        await TortoiseAuthor.filter(id=author.id).delete()
 
 
 class DefaultAuthor(Model):

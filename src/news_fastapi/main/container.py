@@ -14,13 +14,13 @@ from dependency_injector.providers import (
 from news_fastapi.adapters.auth.http_request import RequestAuthFactory, RequestHolder
 from news_fastapi.adapters.auth.jwt_mock import MockJWTConfig
 from news_fastapi.adapters.event_handlers import domain_event_handler_registry
-from news_fastapi.adapters.persistence.authors import (
+from news_fastapi.adapters.persistence.events import TortoiseDomainEventStore
+from news_fastapi.adapters.persistence.news import TortoiseNewsArticleRepository
+from news_fastapi.adapters.persistence.tortoise.authors import (
     TortoiseAuthorFactory,
     TortoiseAuthorRepository,
     TortoiseDefaultAuthorRepository,
 )
-from news_fastapi.adapters.persistence.events import TortoiseDomainEventStore
-from news_fastapi.adapters.persistence.news import TortoiseNewsArticleRepository
 from news_fastapi.adapters.persistence.transaction import TortoiseTransactionManager
 from news_fastapi.core.authors.services import (
     AuthorsListService,
