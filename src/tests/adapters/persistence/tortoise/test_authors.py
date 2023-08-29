@@ -8,8 +8,10 @@ from news_fastapi.adapters.persistence.tortoise.authors import (
     TortoiseAuthorRepository,
     TortoiseDefaultAuthorRepository,
 )
-from tests.adapters.persistence.tortoise import tortoise_orm_lifespan
-from tests.domain.fixtures import HUMAN_NAMES
+from news_fastapi.domain.authors import Author
+from news_fastapi.utils.exceptions import NotFoundError
+from tests.adapters.persistence.tortoise.fixtures import tortoise_orm_lifespan
+from tests.fixtures import HUMAN_NAMES
 from tests.utils import AssertMixin
 
 
@@ -32,6 +34,22 @@ class TortoiseAuthorRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         await self.enterAsyncContext(tortoise_orm_lifespan())
 
+    def _create_valid_author(self) -> TortoiseAuthor:
+        author_id = "11111111-1111-1111-1111-111111111111"
+        name = "John Doe"
+        return TortoiseAuthor(id=author_id, name=name)
+
+    async def _populate_authors(self) -> None:
+        self.assertGreater(len(HUMAN_NAMES), 50)
+        for name in HUMAN_NAMES:
+            await TortoiseAuthor.create(id=str(uuid4()), name=name)
+
+    def assertAuthorsAreCompletelyEqual(
+        self, author_1: Author, author_2: Author
+    ) -> None:
+        self.assertEqual(author_1.id, author_2.id)
+        self.assertEqual(author_1.name, author_2.name)
+
     async def test_next_identity(self) -> None:
         id_1 = await self.repository.next_identity()
         id_2 = await self.repository.next_identity()
@@ -43,19 +61,18 @@ class TortoiseAuthorRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
         self.assertNotEqual(id_1, id_2)
 
     async def test_get_author_by_id(self) -> None:
-        author_id = "11111111-1111-1111-1111-111111111111"
-        name = "John Doe"
-        await TortoiseAuthor.create(id=author_id, name=name)
+        saved_author = self._create_valid_author()
+        await saved_author.save()
 
-        author = await self.repository.get_author_by_id(author_id=author_id)
+        author_id = saved_author.id
+        author_from_db = await self.repository.get_author_by_id(author_id=author_id)
 
-        self.assertEqual(author.id, author_id)
-        self.assertEqual(author.name, name)
+        self.assertAuthorsAreCompletelyEqual(author_from_db, saved_author)
 
-    async def _populate_authors(self) -> None:
-        self.assertGreater(len(HUMAN_NAMES), 50)
-        for name in HUMAN_NAMES:
-            await TortoiseAuthor.create(id=str(uuid4()), name=name)
+    async def test_get_author_by_id_raises_not_found(self) -> None:
+        non_existent_author_id = str(uuid4())
+        with self.assertRaises(NotFoundError):
+            await self.repository.get_author_by_id(non_existent_author_id)
 
     async def test_get_authors_list(self) -> None:
         await self._populate_authors()
@@ -66,7 +83,7 @@ class TortoiseAuthorRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
     async def test_get_authors_list_too_big_offset_returns_empty_list(self) -> None:
         await self._populate_authors()
         authors_list = await self.repository.get_authors_list(offset=10000, limit=50)
-        self.assertIsEmpty(authors_list)
+        self.assertEmpty(authors_list)
 
     async def test_get_authors_list_negative_offset_raises_values_error(self) -> None:
         await self._populate_authors()
@@ -96,7 +113,7 @@ class TortoiseAuthorRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
         self,
     ) -> None:
         authors_mapping = await self.repository.get_authors_in_bulk(id_list=[])
-        self.assertIsEmpty(authors_mapping)
+        self.assertEmpty(authors_mapping)
 
     async def test_get_authors_in_bulk_ignores_not_found(self) -> None:
         non_existent_id = "12341234-1234-1234-1234-123412341234"
@@ -106,38 +123,29 @@ class TortoiseAuthorRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
         self.assertNotIn(non_existent_id, authors_mapping)
 
     async def test_save_creates_if_does_not_exist(self) -> None:
-        author_id = "11111111-1111-1111-1111-111111111111"
-        name = "John Doe"
-        author = TortoiseAuthor(id=author_id, name=name)
-
+        author = self._create_valid_author()
         await self.repository.save(author)
-
-        author_from_get = await TortoiseAuthor.get(id=author_id)
-        self.assertEqual(author_from_get.name, name)
+        author_from_get = await TortoiseAuthor.get(id=author.id)
+        self.assertAuthorsAreCompletelyEqual(author_from_get, author)
 
     async def test_save_updates_if_exists(self) -> None:
-        author_id = "11111111-1111-1111-1111-111111111111"
-        name = "John Doe"
-        await TortoiseAuthor.create(id=author_id, name=name)
+        author = self._create_valid_author()
+        await author.save()
 
         new_name = "Tim Gray"
-        author = TortoiseAuthor(id=author_id, name=new_name)
-
+        author = TortoiseAuthor(id=author.id, name=new_name)
         await self.repository.save(author)
 
-        author_from_get = await TortoiseAuthor.get(id=author_id)
-        self.assertEqual(author_from_get.name, new_name)
+        author_from_get = await TortoiseAuthor.get(id=author.id)
+        self.assertAuthorsAreCompletelyEqual(author_from_get, author)
 
     async def test_remove(self) -> None:
-        author_id = "11111111-1111-1111-1111-111111111111"
-        name = "John Doe"
-        await TortoiseAuthor.create(id=author_id, name=name)
-
-        author = TortoiseAuthor(id=author_id, name=name)
+        author = self._create_valid_author()
+        await author.save()
 
         await self.repository.remove(author=author)
 
-        self.assertFalse(await TortoiseAuthor.exists(id=author_id))
+        self.assertFalse(await TortoiseAuthor.exists(id=author.id))
 
 
 class TortoiseDefaultAuthorRepositoryTests(IsolatedAsyncioTestCase):

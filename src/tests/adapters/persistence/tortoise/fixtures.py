@@ -13,9 +13,9 @@ async def tortoise_orm_lifespan():
             news_fastapi=dict(
                 models=[
                     "news_fastapi.adapters.persistence.tortoise.authors",
-                    "news_fastapi.adapters.persistence.drafts",
-                    "news_fastapi.adapters.persistence.events",
-                    "news_fastapi.adapters.persistence.news",
+                    "news_fastapi.adapters.persistence.tortoise.drafts",
+                    "news_fastapi.adapters.persistence.tortoise.events",
+                    "news_fastapi.adapters.persistence.tortoise.news",
                 ],
             ),
         ),

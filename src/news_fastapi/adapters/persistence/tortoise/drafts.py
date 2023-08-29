@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from datetime import datetime as DateTime
 from typing import Collection
 from uuid import uuid4
@@ -9,22 +8,6 @@ from tortoise.fields import BooleanField, DatetimeField, TextField
 
 from news_fastapi.domain.drafts import Draft, DraftFactory, DraftRepository
 from news_fastapi.utils.exceptions import NotFoundError
-
-
-@dataclass
-class DraftDataclass:
-    id: str  # pylint: disable=invalid-name
-    news_article_id: str | None
-    headline: str
-    date_published: DateTime | None
-    author_id: str
-    text: str
-    created_by_user_id: str
-    is_published: bool
-
-    def __assert_implements_protocol(self) -> Draft:
-        # pylint: disable=unused-private-member
-        return self
 
 
 class TortoiseDraft(Model):
@@ -80,6 +63,13 @@ class TortoiseDraftRepository(DraftRepository):
             )
         await draft.save()
 
+    async def get_drafts_list(
+        self, offset: int = 0, limit: int = 10
+    ) -> Collection[Draft]:
+        if offset < 0:
+            raise ValueError("Offset must be non-negative")
+        return await TortoiseDraft.all().offset(offset).limit(limit)
+
     async def get_draft_by_id(self, draft_id: str) -> Draft:
         try:
             return await TortoiseDraft.get(id=draft_id)
@@ -88,7 +78,9 @@ class TortoiseDraftRepository(DraftRepository):
 
     async def get_not_published_draft_by_news_id(self, news_article_id: str) -> Draft:
         try:
-            return await TortoiseDraft.get(is_published=False, news_id=news_article_id)
+            return await TortoiseDraft.get(
+                is_published=False, news_article_id=news_article_id
+            )
         except DoesNotExist as err:
             raise NotFoundError(
                 f"There is no not published draft for news article {news_article_id}"

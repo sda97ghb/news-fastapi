@@ -11,7 +11,6 @@ from news_fastapi.core.exceptions import AuthorizationError
 from news_fastapi.utils.exceptions import NotFoundError
 from tests.core.fixtures import TestAuthorsAuth, TestCoreTransactionManager
 from tests.domain.fixtures import (
-    HUMAN_NAMES,
     TestAuthor,
     TestAuthorFactory,
     TestAuthorRepository,
@@ -20,6 +19,7 @@ from tests.domain.fixtures import (
     TestDomainEventStore,
     TestNewsArticleRepository,
 )
+from tests.fixtures import HUMAN_NAMES
 
 
 class AuthorsListServiceTests(IsolatedAsyncioTestCase):

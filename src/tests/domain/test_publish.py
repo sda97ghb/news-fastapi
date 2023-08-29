@@ -48,7 +48,7 @@ class DraftValidatorTests(AssertMixin, TestCase):
     def test_validate(self) -> None:
         valid_draft = self.create_valid_draft()
         problems_list = self._validate_draft(valid_draft)
-        self.assertIsEmpty(problems_list)
+        self.assertEmpty(problems_list)
 
     def test_validate_empty_headline_is_invalid(self) -> None:
         draft = self.create_valid_draft()

@@ -1,6 +1,5 @@
-from collections.abc import Collection
-from dataclasses import dataclass
 from datetime import datetime as DateTime
+from typing import Collection
 from uuid import uuid4
 
 from tortoise import Model
@@ -15,20 +14,6 @@ from news_fastapi.domain.news import (
     NewsArticleRepository,
 )
 from news_fastapi.utils.exceptions import NotFoundError
-
-
-@dataclass
-class NewsArticleDataclass:
-    id: str  # pylint: disable=invalid-name
-    headline: str
-    date_published: DateTime
-    author_id: str
-    text: str
-    revoke_reason: str | None
-
-    def __assert_implements_protocol(self) -> NewsArticle:
-        # pylint: disable=unused-private-member
-        return self
 
 
 class TortoiseNewsArticle(Model):
@@ -84,6 +69,8 @@ class TortoiseNewsArticleRepository(NewsArticleRepository):
         limit: int = 10,
         filter_: NewsArticleListFilter | None = None,
     ) -> Collection[NewsArticle]:
+        if offset < 0:
+            raise ValueError("Offset must be positive integer")
         queryset = TortoiseNewsArticle.all()
         if filter_ is not None:
             queryset = self._apply_filter_to_queryset(filter_, queryset)
