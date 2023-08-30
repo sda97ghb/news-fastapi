@@ -5,8 +5,7 @@ from tortoise import Model
 from tortoise.fields import BinaryField, BooleanField, DatetimeField, TextField
 
 from news_fastapi.domain.authors import AuthorDeleted
-from news_fastapi.domain.events.models import DomainEvent
-from news_fastapi.domain.events.store import DomainEventStore
+from news_fastapi.domain.events import DomainEvent, DomainEventStore
 
 
 class TortoiseDomainEvent(Model):
@@ -36,8 +35,8 @@ class TortoiseDomainEventStore(DomainEventStore):
         )
         await stored_event.save()
 
-    async def get_not_sent_events(self) -> Collection[DomainEvent]:
-        events_list = await TortoiseDomainEvent.filter(is_sent=False)
+    async def get_not_sent_events(self, limit: int) -> Collection[DomainEvent]:
+        events_list = await TortoiseDomainEvent.filter(is_sent=False).limit(limit)
         return [self._parse(event) for event in events_list]
 
     async def ack_event_send(self, event: DomainEvent) -> None:

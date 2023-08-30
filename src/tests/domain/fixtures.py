@@ -11,9 +11,11 @@ from news_fastapi.domain.authors import (
     DefaultAuthorRepository,
 )
 from news_fastapi.domain.drafts import Draft, DraftFactory, DraftRepository
-from news_fastapi.domain.events.models import DomainEvent
-from news_fastapi.domain.events.publisher import DomainEventIdGenerator
-from news_fastapi.domain.events.store import DomainEventStore
+from news_fastapi.domain.events import (
+    DomainEvent,
+    DomainEventIdGenerator,
+    DomainEventStore,
+)
 from news_fastapi.domain.news import (
     NewsArticle,
     NewsArticleFactory,
@@ -254,7 +256,7 @@ class TestDomainEventStore(DomainEventStore):
     async def append(self, event: DomainEvent) -> None:
         self._data.append(event)
 
-    async def get_not_sent_events(self) -> Collection[DomainEvent]:
+    async def get_not_sent_events(self, limit: int) -> Collection[DomainEvent]:
         raise NotImplementedError
 
     async def ack_event_send(self, event: DomainEvent) -> None:

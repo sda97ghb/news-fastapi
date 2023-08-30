@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
-from news_fastapi.domain.events.models import DomainEvent
+from news_fastapi.domain.events import DomainEvent
 
 
 @runtime_checkable
@@ -59,3 +59,6 @@ class DefaultAuthorRepository(ABC):
 @dataclass
 class AuthorDeleted(DomainEvent):
     author_id: str
+
+    def _to_json_extra_fields(self) -> dict[str, Any]:
+        return {"author_id": self.author_id}

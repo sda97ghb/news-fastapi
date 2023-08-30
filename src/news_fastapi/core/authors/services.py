@@ -10,8 +10,7 @@ from news_fastapi.domain.authors import (
     AuthorRepository,
     DefaultAuthorRepository,
 )
-from news_fastapi.domain.events.publisher import DomainEventIdGenerator
-from news_fastapi.domain.events.store import DomainEventStore
+from news_fastapi.domain.events import DomainEventIdGenerator, DomainEventStore
 from news_fastapi.domain.news import NewsArticleRepository
 from news_fastapi.utils.sentinels import Undefined, UndefinedType
 
