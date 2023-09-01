@@ -13,7 +13,6 @@ from starlette.status import (
 from tortoise import Tortoise
 
 from news_fastapi.adapters.auth.http_request import RequestHolder
-from news_fastapi.adapters.events.server import DomainEventServer
 from news_fastapi.adapters.rest_api.authors import router as authors_router
 from news_fastapi.adapters.rest_api.drafts import router as drafts_router
 from news_fastapi.adapters.rest_api.news import router as news_router
@@ -35,13 +34,10 @@ di_container.config.from_dict(
 @inject
 async def lifespan(
     app: FastAPI,  # pylint: disable=redefined-outer-name,unused-argument
-    domain_event_server: DomainEventServer = Provide["domain_event_server"],
     tortoise_config: dict = Provide["tortoise_config"],
 ):
     await Tortoise.init(config=tortoise_config)
-    domain_event_server.start()
     yield
-    await domain_event_server.stop()
     await Tortoise.close_connections()
 
 

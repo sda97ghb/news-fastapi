@@ -1,15 +1,15 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from datetime import datetime as DateTime
+from dataclasses import dataclass, field as dataclass_field
+from datetime import UTC, datetime as DateTime
 from json import dumps as dumps_json
-from typing import Any, Collection
+from typing import Any, Iterable
 from uuid import uuid4
 
 
-@dataclass
+@dataclass(kw_only=True)
 class DomainEvent(ABC):
-    event_id: str
-    date_occurred: DateTime
+    event_id: str = dataclass_field(default_factory=lambda: str(uuid4()))
+    date_occurred: DateTime = dataclass_field(default_factory=lambda: DateTime.now(UTC))
 
     @property
     def type_name(self) -> str:
@@ -31,26 +31,25 @@ class DomainEvent(ABC):
         return dumps_json(self.to_json())
 
 
-class DomainEventStore(ABC):
-    @abstractmethod
-    async def append(self, event: DomainEvent) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def get_not_sent_events(self, limit: int) -> Collection[DomainEvent]:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def ack_event_send(self, event: DomainEvent) -> None:
-        raise NotImplementedError
+class CompleteDomainEventBufferError(Exception):
+    pass
 
 
-class DomainEventIdGenerator(ABC):
-    @abstractmethod
-    async def next_event_id(self) -> str:
-        raise NotImplementedError
+class DomainEventBuffer:
+    _events: list[DomainEvent]
+    _is_complete: bool
 
+    def __init__(self) -> None:
+        self._events = []
+        self._is_complete = False
 
-class UUID4DomainEventIdGenerator(DomainEventIdGenerator):
-    async def next_event_id(self) -> str:
-        return str(uuid4())
+    def append(self, event: DomainEvent) -> None:
+        if self._is_complete:
+            raise CompleteDomainEventBufferError(
+                "Can not append event into complete buffer"
+            )
+        self._events.append(event)
+
+    def complete(self) -> Iterable[DomainEvent]:
+        self._is_complete = True
+        return self._events

@@ -1,13 +1,16 @@
 from dataclasses import dataclass
 from datetime import datetime as DateTime
 from typing import Any
-from unittest import IsolatedAsyncioTestCase, TestCase
+from unittest import TestCase
 
-from news_fastapi.domain.events import DomainEvent, UUID4DomainEventIdGenerator
-from tests.utils import AssertMixin
+from news_fastapi.domain.events import (
+    CompleteDomainEventBufferError,
+    DomainEvent,
+    DomainEventBuffer,
+)
 
 
-@dataclass
+@dataclass(kw_only=True)
 class TestDomainEvent(DomainEvent):
     answer: int
 
@@ -49,15 +52,19 @@ class DomainEventTests(TestCase):
         )
 
 
-class UUID4DomainEventIdGeneratorTests(AssertMixin, IsolatedAsyncioTestCase):
+class DomainEventBufferTests(TestCase):
     def setUp(self) -> None:
-        self.generator = UUID4DomainEventIdGenerator()
+        self.buffer = DomainEventBuffer()
 
-    async def test_next_event_id_returns_valid_uuid(self) -> None:
-        id_ = await self.generator.next_event_id()
-        self.assertValidUUID(id_)
+    def test_lifecycle(self) -> None:
+        event_1 = TestDomainEvent(answer=42)
+        event_2 = TestDomainEvent(answer=10)
+        self.buffer.append(event_1)
+        self.buffer.append(event_2)
+        events = self.buffer.complete()
+        self.assertCountEqual(events, [event_1, event_2])
 
-    async def test_next_event_id_returns_different_ids(self) -> None:
-        id_1 = await self.generator.next_event_id()
-        id_2 = await self.generator.next_event_id()
-        self.assertNotEqual(id_1, id_2)
+    def test_can_not_append_after_complete(self) -> None:
+        self.buffer.complete()
+        with self.assertRaises(CompleteDomainEventBufferError):
+            self.buffer.append(TestDomainEvent(answer=42))

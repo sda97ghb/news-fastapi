@@ -1,5 +1,3 @@
-from datetime import UTC, datetime as DateTime
-
 from news_fastapi.core.authors.auth import AuthorsAuth
 from news_fastapi.core.authors.exceptions import DeleteAuthorError
 from news_fastapi.core.transaction import TransactionManager
@@ -10,7 +8,7 @@ from news_fastapi.domain.authors import (
     AuthorRepository,
     DefaultAuthorRepository,
 )
-from news_fastapi.domain.events import DomainEventIdGenerator, DomainEventStore
+from news_fastapi.domain.events import DomainEventBuffer
 from news_fastapi.domain.news import NewsArticleRepository
 from news_fastapi.utils.sentinels import Undefined, UndefinedType
 
@@ -33,8 +31,7 @@ class AuthorsService:
     _author_factory: AuthorFactory
     _author_repository: AuthorRepository
     _news_article_repository: NewsArticleRepository
-    _domain_event_id_generator: DomainEventIdGenerator
-    _domain_event_store: DomainEventStore
+    _domain_event_buffer: DomainEventBuffer
 
     def __init__(
         self,
@@ -43,16 +40,14 @@ class AuthorsService:
         author_factory: AuthorFactory,
         author_repository: AuthorRepository,
         news_article_repository: NewsArticleRepository,
-        domain_event_id_generator: DomainEventIdGenerator,
-        domain_event_store: DomainEventStore,
+        domain_event_buffer: DomainEventBuffer,
     ) -> None:
         self._auth = auth
         self._transaction_manager = transaction_manager
         self._author_factory = author_factory
         self._author_repository = author_repository
         self._news_article_repository = news_article_repository
-        self._domain_event_id_generator = domain_event_id_generator
-        self._domain_event_store = domain_event_store
+        self._domain_event_buffer = domain_event_buffer
 
     async def get_author(self, author_id: str) -> Author:
         return await self._author_repository.get_author_by_id(author_id)
@@ -87,14 +82,8 @@ class AuthorsService:
                 raise DeleteAuthorError(
                     "Can't delete an author with at least one published news article"
                 )
-            await self._publish_author_deleted(author_id)
+            self._domain_event_buffer.append(AuthorDeleted(author_id=author_id))
             await self._author_repository.remove(author)
-
-    async def _publish_author_deleted(self, author_id: str) -> None:
-        event_id = await self._domain_event_id_generator.next_event_id()
-        now = DateTime.now(UTC)
-        event = AuthorDeleted(event_id=event_id, date_occurred=now, author_id=author_id)
-        await self._domain_event_store.append(event)
 
 
 class DefaultAuthorsService:

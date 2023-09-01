@@ -11,11 +11,6 @@ from news_fastapi.domain.authors import (
     DefaultAuthorRepository,
 )
 from news_fastapi.domain.drafts import Draft, DraftFactory, DraftRepository
-from news_fastapi.domain.events import (
-    DomainEvent,
-    DomainEventIdGenerator,
-    DomainEventStore,
-)
 from news_fastapi.domain.news import (
     NewsArticle,
     NewsArticleFactory,
@@ -240,24 +235,3 @@ class TestAuthorRepository(AuthorRepository):
             del self._data[author.id]
         except KeyError:
             pass
-
-
-class TestDomainEventIdGenerator(DomainEventIdGenerator):
-    async def next_event_id(self) -> str:
-        return str(uuid4())
-
-
-class TestDomainEventStore(DomainEventStore):
-    _data: list[DomainEvent]
-
-    def __init__(self) -> None:
-        self._data = []
-
-    async def append(self, event: DomainEvent) -> None:
-        self._data.append(event)
-
-    async def get_not_sent_events(self, limit: int) -> Collection[DomainEvent]:
-        raise NotImplementedError
-
-    async def ack_event_send(self, event: DomainEvent) -> None:
-        raise NotImplementedError

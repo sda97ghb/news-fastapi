@@ -14,7 +14,6 @@ async def tortoise_orm_lifespan():
                 models=[
                     "news_fastapi.adapters.persistence.tortoise.authors",
                     "news_fastapi.adapters.persistence.tortoise.drafts",
-                    "news_fastapi.adapters.persistence.tortoise.events",
                     "news_fastapi.adapters.persistence.tortoise.news",
                 ],
             ),

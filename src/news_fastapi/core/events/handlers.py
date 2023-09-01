@@ -1,10 +1,10 @@
 from dependency_injector.wiring import Provide
 
-from news_fastapi.adapters.events.server import EventHandlerRegistry
 from news_fastapi.core.drafts.services import DraftsService
+from news_fastapi.core.events.registry import DomainEventHandlerRegistry
 from news_fastapi.domain.authors import AuthorDeleted
 
-domain_event_handler_registry = EventHandlerRegistry()
+domain_event_handler_registry = DomainEventHandlerRegistry()
 
 
 @domain_event_handler_registry.on(AuthorDeleted)

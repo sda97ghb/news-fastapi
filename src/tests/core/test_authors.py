@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
@@ -8,6 +9,8 @@ from news_fastapi.core.authors.services import (
     DefaultAuthorsService,
 )
 from news_fastapi.core.exceptions import AuthorizationError
+from news_fastapi.domain.authors import AuthorDeleted
+from news_fastapi.domain.events import DomainEvent, DomainEventBuffer
 from news_fastapi.utils.exceptions import NotFoundError
 from tests.core.fixtures import TestAuthorsAuth, TestCoreTransactionManager
 from tests.domain.fixtures import (
@@ -15,8 +18,6 @@ from tests.domain.fixtures import (
     TestAuthorFactory,
     TestAuthorRepository,
     TestDefaultAuthorRepository,
-    TestDomainEventIdGenerator,
-    TestDomainEventStore,
     TestNewsArticleRepository,
 )
 from tests.fixtures import HUMAN_NAMES
@@ -67,16 +68,14 @@ class AuthorsServiceTests(IsolatedAsyncioTestCase):
         self.author_factory = TestAuthorFactory()
         self.author_repository = TestAuthorRepository()
         self.news_article_repository = TestNewsArticleRepository()
-        self.domain_event_id_generator = TestDomainEventIdGenerator()
-        self.domain_event_store = TestDomainEventStore()
+        self.domain_event_buffer = DomainEventBuffer()
         self.authors_service = AuthorsService(
             auth=self.authors_auth,
             transaction_manager=self.transaction_manager,
             author_factory=self.author_factory,
             author_repository=self.author_repository,
             news_article_repository=self.news_article_repository,
-            domain_event_id_generator=self.domain_event_id_generator,
-            domain_event_store=self.domain_event_store,
+            domain_event_buffer=self.domain_event_buffer,
         )
 
     async def _create_author(self) -> str:
@@ -135,6 +134,28 @@ class AuthorsServiceTests(IsolatedAsyncioTestCase):
             await self.authors_service.delete_author(
                 author_id="22222222-2222-2222-2222-222222222222"
             )
+
+    async def test_delete_author_emits_author_deleted_domain_event(self) -> None:
+        author_id = await self._create_author()
+
+        await self.authors_service.delete_author(author_id)
+
+        events = self.domain_event_buffer.complete()
+        self.assertEventEmitted(events, AuthorDeleted, author_id=author_id)
+
+    def assertEventEmitted(
+        self, events: Iterable[DomainEvent], event_type: type[DomainEvent], **kwargs
+    ) -> None:
+        for event in events:
+            if isinstance(event, event_type) and all(
+                getattr(event, attr) == expected_value
+                for attr, expected_value in kwargs.items()
+            ):
+                return
+        self.fail(
+            f"Expected event {event_type.__name__}({kwargs}) was not emitted. "
+            f"Emitted events: {events}"
+        )
 
 
 class DefaultAuthorsServiceTests(IsolatedAsyncioTestCase):

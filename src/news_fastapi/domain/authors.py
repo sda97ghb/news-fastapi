@@ -56,7 +56,7 @@ class DefaultAuthorRepository(ABC):
         raise NotImplementedError
 
 
-@dataclass
+@dataclass(kw_only=True)
 class AuthorDeleted(DomainEvent):
     author_id: str
 
