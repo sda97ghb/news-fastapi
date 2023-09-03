@@ -1,10 +1,9 @@
 from datetime import datetime as DateTime
-from unittest import IsolatedAsyncioTestCase, TestCase
+from unittest import IsolatedAsyncioTestCase
 from uuid import UUID, uuid4
 
-from news_fastapi.adapters.persistence.tortoise.drafts import (
-    TortoiseDraft,
-    TortoiseDraftFactory,
+from news_fastapi.adapters.persistence.tortoise.draft import (
+    DraftModel,
     TortoiseDraftRepository,
 )
 from news_fastapi.domain.draft import Draft
@@ -15,46 +14,6 @@ from tests.fixtures import HEADLINES, PREDICTABLE_IDS_A, PREDICTABLE_IDS_B, TEXT
 from tests.utils import AssertMixin
 
 
-class TortoiseDraftFactoryTests(TestCase):
-    def setUp(self) -> None:
-        self.factory = TortoiseDraftFactory()
-
-    def test_create_draft(self) -> None:
-        draft_id = "11111111-1111-1111-1111-111111111111"
-        news_article_id = "22222222-2222-2222-2222-222222222222"
-        headline = "The Headline"
-        date_published = DateTime.fromisoformat("2023-01-01T12:00:00+0000")
-        author_id = "33333333-3333-3333-3333-333333333333"
-        image = Image(
-            url="https://example.com/images/1234",
-            description="The description of the image",
-            author="Emma Brown",
-        )
-        text = "The text of the draft."
-        user_id = "44444444-4444-4444-4444-444444444444"
-        is_published = False
-        draft = self.factory._create_draft(
-            draft_id=draft_id,
-            news_article_id=news_article_id,
-            headline=headline,
-            date_published=date_published,
-            author_id=author_id,
-            image=image,
-            text=text,
-            created_by_user_id=user_id,
-            is_published=is_published,
-        )
-        self.assertEqual(draft.id, draft_id)
-        self.assertEqual(draft.news_article_id, news_article_id)
-        self.assertEqual(draft.headline, headline)
-        self.assertEqual(draft.date_published, date_published)
-        self.assertEqual(draft.author_id, author_id)
-        self.assertEqual(draft.image, image)
-        self.assertEqual(draft.text, text)
-        self.assertEqual(draft.created_by_user_id, user_id)
-        self.assertEqual(draft.is_published, is_published)
-
-
 class TortoiseDraftRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.repository = TortoiseDraftRepository()
@@ -62,23 +21,42 @@ class TortoiseDraftRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         await self.enterAsyncContext(tortoise_orm_lifespan())
 
-    def _create_valid_draft(self) -> TortoiseDraft:
-        draft = TortoiseDraft(
+    def _create_valid_draft_model_instance(self) -> DraftModel:
+        return DraftModel(
             id="11111111-1111-1111-1111-111111111111",
             news_article_id="22222222-2222-2222-2222-222222222222",
             headline="The Headline",
             date_published=DateTime.fromisoformat("2023-01-01T12:00:00+0000"),
             author_id="33333333-3333-3333-3333-333333333333",
+            image_url="https://example.com/images/1234",
+            image_description="The description of the image",
+            image_author="Emma Brown",
             text="The text of the draft.",
             created_by_user_id="44444444-4444-4444-4444-444444444444",
             is_published=False,
         )
-        draft.image = Image(
-            url="https://example.com/images/1234",
-            description="The description of the image",
-            author="Emma Brown",
+
+    def _create_draft(self) -> Draft:
+        return Draft(
+            id_="11111111-1111-1111-1111-111111111111",
+            news_article_id="22222222-2222-2222-2222-222222222222",
+            headline="The Headline",
+            date_published=DateTime.fromisoformat("2023-01-01T12:00:00+0000"),
+            author_id="33333333-3333-3333-3333-333333333333",
+            image=Image(
+                url="https://example.com/images/1234",
+                description="The description of the image",
+                author="Emma Brown",
+            ),
+            text="The text of the draft.",
+            created_by_user_id="44444444-4444-4444-4444-444444444444",
+            is_published=False,
         )
-        return draft
+
+    async def _populate_draft(self) -> DraftModel:
+        draft_model_instance = self._create_valid_draft_model_instance()
+        await draft_model_instance.save()
+        return draft_model_instance
 
     async def _populate_drafts(
         self,
@@ -93,33 +71,43 @@ class TortoiseDraftRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
             HEADLINES[:count],
             TEXTS[:count],
         ):
-            draft = TortoiseDraft(
+            draft_model_instance = DraftModel(
                 id=draft_id,
                 news_article_id=news_article_id,
                 headline=headline,
                 date_published=date_published,
                 author_id=author_id,
+                image_url="https://example.com/images/1234",
+                image_description="The description of the image",
+                image_author="Emma Brown",
                 text=text,
                 created_by_user_id=user_id,
                 is_published=False,
             )
-            draft.image = Image(
-                url="https://example.com/images/1234",
-                description="The description of the image",
-                author="Emma Brown",
-            )
-            await draft.save()
+            await draft_model_instance.save()
 
-    def assertDraftsAreCompletelyEqual(self, draft_1: Draft, draft_2: Draft) -> None:
-        self.assertEqual(draft_1.id, draft_2.id)
-        self.assertEqual(draft_1.news_article_id, draft_2.news_article_id)
-        self.assertEqual(draft_1.headline, draft_2.headline)
-        self.assertEqual(draft_1.date_published, draft_2.date_published)
-        self.assertEqual(draft_1.author_id, draft_2.author_id)
-        self.assertEqual(draft_1.image, draft_2.image)
-        self.assertEqual(draft_1.text, draft_2.text)
-        self.assertEqual(draft_1.created_by_user_id, draft_2.created_by_user_id)
-        self.assertEqual(draft_1.is_published, draft_2.is_published)
+    def assertDraftAndModelAreCompletelyEqual(
+        self, draft: Draft, model_instance: DraftModel
+    ) -> None:
+        self.assertEqual(draft.id, model_instance.id)
+        self.assertEqual(draft.news_article_id, model_instance.news_article_id)
+        self.assertEqual(draft.headline, model_instance.headline)
+        self.assertEqual(draft.date_published, model_instance.date_published)
+        self.assertEqual(draft.author_id, model_instance.author_id)
+        if draft.image is None:
+            self.assertIsNone(model_instance.image_url)
+            self.assertIsNone(model_instance.image_description)
+            self.assertIsNone(model_instance.image_author)
+        else:
+            self.assertEqual(draft.image.url, model_instance.image_url)
+            self.assertEqual(draft.image.description, model_instance.image_description)
+            self.assertEqual(draft.image.author, model_instance.image_author)
+        self.assertEqual(draft.text, model_instance.text)
+        self.assertEqual(draft.created_by_user_id, model_instance.created_by_user_id)
+        self.assertEqual(draft.is_published, model_instance.is_published)
+
+    async def assertDraftDoesNotExist(self, draft_id: str) -> None:
+        self.assertFalse(await DraftModel.exists(id=draft_id))
 
     async def test_next_identity(self) -> None:
         id_1 = await self.repository.next_identity()
@@ -132,28 +120,33 @@ class TortoiseDraftRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
         self.assertNotEqual(id_1, id_2)
 
     async def test_save_creates_if_does_not_exist(self) -> None:
-        draft = self._create_valid_draft()
+        draft = self._create_draft()
         await self.repository.save(draft)
-        saved_draft = await TortoiseDraft.get(id=draft.id)
-        self.assertDraftsAreCompletelyEqual(draft, saved_draft)
+        saved_draft_model_instance = await DraftModel.get(id=draft.id)
+        self.assertDraftAndModelAreCompletelyEqual(draft, saved_draft_model_instance)
 
     async def test_save_updates_if_exists(self) -> None:
-        draft = self._create_valid_draft()
-        await draft.save()
+        draft_model_instance = await self._populate_draft()
 
-        draft.headline = "NEW Headline"
-        draft.date_published = DateTime.fromisoformat("2023-03-11T15:00:00+0000")
-        draft.author_id = "77777777-7777-7777-7777-777777777777"
-        draft.image = Image(
-            url="https://example.com/images/99999-NEW",
-            description="NEW description of the image",
-            author="NEW Author",
+        draft = Draft(
+            id_=draft_model_instance.id,
+            news_article_id=draft_model_instance.news_article_id,
+            created_by_user_id=draft_model_instance.created_by_user_id,
+            headline="NEW Headline",
+            date_published=DateTime.fromisoformat("2023-03-11T15:00:00+0000"),
+            author_id="77777777-7777-7777-7777-777777777777",
+            image=Image(
+                url="https://example.com/images/99999-NEW",
+                description="NEW description of the image",
+                author="NEW Author",
+            ),
+            text="NEW text.",
+            is_published=draft_model_instance.is_published,
         )
-        draft.text = "NEW text."
         await self.repository.save(draft)
 
-        saved_draft = await TortoiseDraft.get(id=draft.id)
-        self.assertDraftsAreCompletelyEqual(saved_draft, draft)
+        saved_draft_model_instance = await DraftModel.get(id=draft.id)
+        self.assertDraftAndModelAreCompletelyEqual(draft, saved_draft_model_instance)
 
     async def test_get_drafts_list(self) -> None:
         await self._populate_drafts()
@@ -172,13 +165,14 @@ class TortoiseDraftRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
             await self.repository.get_drafts_list(offset=-1, limit=10)
 
     async def test_get_draft_by_id(self) -> None:
-        saved_draft = self._create_valid_draft()
-        await saved_draft.save()
+        saved_draft_model_instance = await self._populate_draft()
 
-        draft_id = saved_draft.id
+        draft_id = saved_draft_model_instance.id
         draft_from_db = await self.repository.get_draft_by_id(draft_id=draft_id)
 
-        self.assertDraftsAreCompletelyEqual(draft_from_db, saved_draft)
+        self.assertDraftAndModelAreCompletelyEqual(
+            draft_from_db, saved_draft_model_instance
+        )
 
     async def test_get_draft_by_id_raises_not_found(self) -> None:
         non_existent_draft_id = str(uuid4())
@@ -186,16 +180,16 @@ class TortoiseDraftRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
             await self.repository.get_draft_by_id(draft_id=non_existent_draft_id)
 
     async def test_get_not_published_draft_by_news_id(self) -> None:
-        draft = self._create_valid_draft()
-        draft.news_article_id = "77777777-7777-7777-7777-777777777777"
-        draft.is_published = False
-        await draft.save()
+        draft_model_instance = self._create_valid_draft_model_instance()
+        draft_model_instance.news_article_id = "77777777-7777-7777-7777-777777777777"
+        draft_model_instance.is_published = False
+        await draft_model_instance.save()
 
         draft_from_db = await self.repository.get_not_published_draft_by_news_id(
-            draft.news_article_id
+            draft_model_instance.news_article_id
         )
 
-        self.assertDraftsAreCompletelyEqual(draft_from_db, draft)
+        self.assertDraftAndModelAreCompletelyEqual(draft_from_db, draft_model_instance)
 
     async def test_get_not_published_draft_by_news_id_raises_not_found(self) -> None:
         non_existent_news_article_id = str(uuid4())
@@ -213,6 +207,9 @@ class TortoiseDraftRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
         self.assertNotEmpty(drafts_list)
         for draft in drafts_list:
             self.assertEqual(draft.author_id, author_id)
+        self.assertEqual(
+            len(drafts_list), await DraftModel.filter(author_id=author_id).count()
+        )
 
     async def test_get_drafts_for_author_returns_empty_list_on_not_found(self) -> None:
         non_existent_author_id = str(uuid4())
@@ -222,9 +219,9 @@ class TortoiseDraftRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
         self.assertEmpty(drafts_list)
 
     async def test_delete(self) -> None:
-        draft = self._create_valid_draft()
-        await draft.save()
+        draft_model_instance = await self._populate_draft()
 
+        draft = await self.repository.get_draft_by_id(draft_model_instance.id)
         await self.repository.delete(draft)
 
-        self.assertFalse(await TortoiseDraft.exists(id=draft.id))
+        await self.assertDraftDoesNotExist(draft_model_instance.id)

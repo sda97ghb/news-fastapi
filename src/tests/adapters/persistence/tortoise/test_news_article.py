@@ -2,9 +2,8 @@ from datetime import datetime as DateTime
 from unittest import IsolatedAsyncioTestCase, TestCase
 from uuid import UUID, uuid4
 
-from news_fastapi.adapters.persistence.tortoise.news import (
-    TortoiseNewsArticle,
-    TortoiseNewsArticleFactory,
+from news_fastapi.adapters.persistence.tortoise.news_article import (
+    NewsArticleModel,
     TortoiseNewsArticleRepository,
 )
 from news_fastapi.domain.news_article import NewsArticle, NewsArticleListFilter
@@ -15,40 +14,6 @@ from tests.fixtures import HEADLINES, PREDICTABLE_IDS_A, TEXTS
 from tests.utils import AssertMixin
 
 
-class TortoiseNewsArticleFactoryTests(TestCase):
-    def setUp(self) -> None:
-        self.factory = TortoiseNewsArticleFactory()
-
-    def test_create_news_article(self) -> None:
-        news_article_id = "11111111-1111-1111-1111-111111111111"
-        headline = "The Headline"
-        date_published = DateTime.fromisoformat("2023-01-01T12:00:00+0000")
-        author_id = "22222222-2222-2222-2222-222222222222"
-        image = Image(
-            url="https://example.com/images/1234",
-            description="The description of the image",
-            author="Emma Brown",
-        )
-        text = "The text of the article."
-        revoke_reason = "Fake"
-        news_article = self.factory.create_news_article(
-            news_article_id=news_article_id,
-            headline=headline,
-            date_published=date_published,
-            author_id=author_id,
-            image=image,
-            text=text,
-            revoke_reason=revoke_reason,
-        )
-        self.assertEqual(news_article.id, news_article_id)
-        self.assertEqual(news_article.headline, headline)
-        self.assertEqual(news_article.date_published, date_published)
-        self.assertEqual(news_article.author_id, author_id)
-        self.assertEqual(news_article.image, image)
-        self.assertEqual(news_article.text, text)
-        self.assertEqual(news_article.revoke_reason, revoke_reason)
-
-
 class TortoiseNewsArticleRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.repository = TortoiseNewsArticleRepository()
@@ -56,23 +21,42 @@ class TortoiseNewsArticleRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         await self.enterAsyncContext(tortoise_orm_lifespan())
 
-    def _create_valid_news_article(
+    def _create_valid_news_article_model_instance(
         self, news_article_id: str = "11111111-1111-1111-1111-111111111111"
-    ) -> TortoiseNewsArticle:
-        news_article = TortoiseNewsArticle(
+    ) -> NewsArticleModel:
+        return NewsArticleModel(
             id=news_article_id,
             headline="The Headline",
             date_published=DateTime.fromisoformat("2023-01-01T12:00:00+0000"),
             author_id="22222222-2222-2222-2222-222222222222",
+            image_url="https://example.com/images/1234",
+            image_description="The description of the image",
+            image_author="Emma Brown",
             text="The text of the news article.",
             revoke_reason=None,
         )
-        news_article.image = Image(
-            url="https://example.com/images/1234",
-            description="The description of the image",
-            author="Emma Brown",
+
+    def _create_news_article(
+        self, news_article_id: str = "11111111-1111-1111-1111-111111111111"
+    ) -> NewsArticle:
+        return NewsArticle(
+            id_=news_article_id,
+            headline="The Headline",
+            date_published=DateTime.fromisoformat("2023-01-01T12:00:00+0000"),
+            author_id="22222222-2222-2222-2222-222222222222",
+            image=Image(
+                url="https://example.com/images/1234",
+                description="The description of the image",
+                author="Emma Brown",
+            ),
+            text="The text of the news article.",
+            revoke_reason=None,
         )
-        return news_article
+
+    async def _populate_news_article(self) -> NewsArticleModel:
+        model_instance = self._create_valid_news_article_model_instance()
+        await model_instance.save()
+        return model_instance
 
     async def _populate_news_articles(
         self,
@@ -84,36 +68,34 @@ class TortoiseNewsArticleRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
         for news_article_id, headline, text in zip(
             PREDICTABLE_IDS_A[:count], HEADLINES[:count], TEXTS[:count]
         ):
-            news_article = TortoiseNewsArticle(
+            news_article = NewsArticleModel(
                 id=news_article_id if predictable_news_article_id else str(uuid4()),
                 headline=headline,
                 date_published=date_published,
                 author_id=author_id,
+                image_url="https://example.com/images/1234",
+                image_description="The description of the image",
+                image_author="Emma Brown",
                 text=text,
                 revoke_reason=None,
             )
-            news_article.image = Image(
-                url="https://example.com/images/1234",
-                description="The description of the image",
-                author="Emma Brown",
-            )
             await news_article.save()
 
-    async def _populate_good_news_article(self) -> TortoiseNewsArticle:
-        published_news_article = self._create_valid_news_article(
+    async def _populate_good_news_article(self) -> NewsArticleModel:
+        published_model_instance = self._create_valid_news_article_model_instance(
             news_article_id=str(uuid4())
         )
-        published_news_article.revoke_reason = None
-        await published_news_article.save()
-        return published_news_article
+        published_model_instance.revoke_reason = None
+        await published_model_instance.save()
+        return published_model_instance
 
-    async def _populate_revoked_news_article(self) -> TortoiseNewsArticle:
-        revoked_news_article = self._create_valid_news_article(
+    async def _populate_revoked_news_article(self) -> NewsArticleModel:
+        revoked_model_instance = self._create_valid_news_article_model_instance(
             news_article_id=str(uuid4())
         )
-        revoked_news_article.revoke_reason = "Fake"
-        await revoked_news_article.save()
-        return revoked_news_article
+        revoked_model_instance.revoke_reason = "Fake"
+        await revoked_model_instance.save()
+        return revoked_model_instance
 
     def assertNewsArticlesAreCompletelyEqual(
         self, news_article_1: NewsArticle, news_article_2: NewsArticle
@@ -124,6 +106,21 @@ class TortoiseNewsArticleRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
         self.assertEqual(news_article_1.author_id, news_article_2.author_id)
         self.assertEqual(news_article_1.text, news_article_2.text)
         self.assertEqual(news_article_1.revoke_reason, news_article_2.revoke_reason)
+
+    def assertNewsArticleAndModelAreCompletelyEqual(
+        self, news_article: NewsArticle, model_instance: NewsArticleModel
+    ) -> None:
+        self.assertEqual(news_article.id, model_instance.id)
+        self.assertEqual(news_article.headline, model_instance.headline)
+        self.assertEqual(news_article.date_published, model_instance.date_published)
+        self.assertEqual(news_article.author_id, model_instance.author_id)
+        self.assertEqual(news_article.image.url, model_instance.image_url)
+        self.assertEqual(
+            news_article.image.description, model_instance.image_description
+        )
+        self.assertEqual(news_article.image.author, model_instance.image_author)
+        self.assertEqual(news_article.text, model_instance.text)
+        self.assertEqual(news_article.revoke_reason, model_instance.revoke_reason)
 
     async def test_next_identity(self) -> None:
         id_1 = await self.repository.next_identity()
@@ -136,29 +133,37 @@ class TortoiseNewsArticleRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
         self.assertNotEqual(id_1, id_2)
 
     async def test_save_creates_if_does_not_exist(self) -> None:
-        news_article = self._create_valid_news_article()
-        await news_article.save()
-        saved_news_article = await TortoiseNewsArticle.get(id=news_article.id)
-        self.assertNewsArticlesAreCompletelyEqual(saved_news_article, news_article)
+        news_article = self._create_news_article()
+        await self.repository.save(news_article)
+        saved_news_article_model_instance = await NewsArticleModel.get(
+            id=news_article.id
+        )
+        self.assertNewsArticleAndModelAreCompletelyEqual(
+            news_article, saved_news_article_model_instance
+        )
 
     async def test_save_updates_if_exists(self) -> None:
-        news_article = self._create_valid_news_article()
-        await news_article.save()
+        news_article_model_instance = await self._populate_news_article()
 
-        news_article.headline = "NEW Headline"
-        news_article.date_published = DateTime.fromisoformat("2023-05-15T15:00:00+0000")
-        news_article.author_id = "77777777-7777-7777-7777-777777777777"
-        news_article.image = Image(
-            url="https://example.com/images/99999-NEW",
-            description="NEW description of the image",
-            author="NEW Author",
+        news_article = NewsArticle(
+            id_=news_article_model_instance.id,
+            headline="NEW Headline",
+            date_published=DateTime.fromisoformat("2023-05-15T15:00:00+0000"),
+            author_id="77777777-7777-7777-7777-777777777777",
+            image=Image(
+                url="https://example.com/images/99999-NEW",
+                description="NEW description of the image",
+                author="NEW Author",
+            ),
+            text="NEW text.",
+            revoke_reason="Fake",
         )
-        news_article.text = "NEW text."
-        news_article.revoke_reason = "Fake"
         await self.repository.save(news_article)
 
-        news_article_from_db = await TortoiseNewsArticle.get(id=news_article.id)
-        self.assertNewsArticlesAreCompletelyEqual(news_article_from_db, news_article)
+        model_instance_from_db = await NewsArticleModel.get(id=news_article.id)
+        self.assertNewsArticleAndModelAreCompletelyEqual(
+            news_article, model_instance_from_db
+        )
 
     async def test_get_news_articles_list(self) -> None:
         await self._populate_news_articles()
@@ -185,8 +190,10 @@ class TortoiseNewsArticleRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
             await self.repository.get_news_articles_list(offset=-1, limit=10)
 
     async def test_get_news_articles_list_filter_no_revoked(self) -> None:
-        good_news_article = await self._populate_good_news_article()
-        revoked_news_article = await self._populate_revoked_news_article()
+        good_news_article_model_instance = await self._populate_good_news_article()
+        revoked_news_article_model_instance = (
+            await self._populate_revoked_news_article()
+        )
 
         filter_ = NewsArticleListFilter(revoked="no_revoked")
         news_articles_list = list(
@@ -196,13 +203,15 @@ class TortoiseNewsArticleRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(len(news_articles_list), 1)
-        self.assertNewsArticlesAreCompletelyEqual(
-            news_articles_list[0], good_news_article
+        self.assertNewsArticleAndModelAreCompletelyEqual(
+            news_articles_list[0], good_news_article_model_instance
         )
 
     async def test_get_news_articles_list_filter_only_revoked(self) -> None:
-        good_news_article = await self._populate_good_news_article()
-        revoked_news_article = await self._populate_revoked_news_article()
+        good_news_article_model_instance = await self._populate_good_news_article()
+        revoked_news_article_model_instance = (
+            await self._populate_revoked_news_article()
+        )
 
         filter_ = NewsArticleListFilter(revoked="only_revoked")
         news_articles_list = list(
@@ -212,21 +221,18 @@ class TortoiseNewsArticleRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(len(news_articles_list), 1)
-        self.assertNewsArticlesAreCompletelyEqual(
-            news_articles_list[0], revoked_news_article
+        self.assertNewsArticleAndModelAreCompletelyEqual(
+            news_articles_list[0], revoked_news_article_model_instance
         )
 
     async def test_get_news_article_by_id(self) -> None:
-        saved_news_article = self._create_valid_news_article()
-        await saved_news_article.save()
+        saved_model_instance = await self._populate_news_article()
 
-        news_article_id = saved_news_article.id
-        news_article_from_db = await self.repository.get_news_article_by_id(
-            news_article_id
-        )
+        news_article_id = saved_model_instance.id
+        news_article = await self.repository.get_news_article_by_id(news_article_id)
 
-        self.assertNewsArticlesAreCompletelyEqual(
-            news_article_from_db, saved_news_article
+        self.assertNewsArticleAndModelAreCompletelyEqual(
+            news_article, saved_model_instance
         )
 
     async def test_get_news_article_by_id_raises_not_found(self) -> None:

@@ -1,10 +1,9 @@
 from unittest import IsolatedAsyncioTestCase, TestCase
 from uuid import UUID, uuid4
 
-from news_fastapi.adapters.persistence.tortoise.authors import (
+from news_fastapi.adapters.persistence.tortoise.author import (
+    AuthorModel,
     DefaultAuthor,
-    TortoiseAuthor,
-    TortoiseAuthorFactory,
     TortoiseAuthorRepository,
     TortoiseDefaultAuthorRepository,
 )
@@ -15,18 +14,6 @@ from tests.fixtures import HUMAN_NAMES
 from tests.utils import AssertMixin
 
 
-class TortoiseAuthorFactoryTests(TestCase):
-    def setUp(self) -> None:
-        self.author_factory = TortoiseAuthorFactory()
-
-    def test_create_author(self) -> None:
-        author_id = "11111111-1111-1111-1111-111111111111"
-        name = "John Doe"
-        author = self.author_factory.create_author(author_id=author_id, name=name)
-        self.assertEqual(author.id, author_id)
-        self.assertEqual(author.name, name)
-
-
 class TortoiseAuthorRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.repository = TortoiseAuthorRepository()
@@ -34,21 +21,29 @@ class TortoiseAuthorRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         await self.enterAsyncContext(tortoise_orm_lifespan())
 
-    def _create_valid_author(self) -> TortoiseAuthor:
+    def _create_valid_author_model_instance(self) -> AuthorModel:
         author_id = "11111111-1111-1111-1111-111111111111"
         name = "John Doe"
-        return TortoiseAuthor(id=author_id, name=name)
+        return AuthorModel(id=author_id, name=name)
+
+    def _create_author(self) -> Author:
+        return Author(id_="11111111-1111-1111-1111-111111111111", name="John Doe")
+
+    async def _populate_author(self) -> AuthorModel:
+        model_instance = self._create_valid_author_model_instance()
+        await model_instance.save()
+        return model_instance
 
     async def _populate_authors(self) -> None:
         self.assertGreater(len(HUMAN_NAMES), 50)
         for name in HUMAN_NAMES:
-            await TortoiseAuthor.create(id=str(uuid4()), name=name)
+            await AuthorModel.create(id=str(uuid4()), name=name)
 
-    def assertAuthorsAreCompletelyEqual(
-        self, author_1: Author, author_2: Author
+    def assertAuthorAndModelAreCompletelyEqual(
+        self, author: Author, model_instance: AuthorModel
     ) -> None:
-        self.assertEqual(author_1.id, author_2.id)
-        self.assertEqual(author_1.name, author_2.name)
+        self.assertEqual(author.id, model_instance.id)
+        self.assertEqual(author.name, model_instance.name)
 
     async def test_next_identity(self) -> None:
         id_1 = await self.repository.next_identity()
@@ -61,13 +56,14 @@ class TortoiseAuthorRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
         self.assertNotEqual(id_1, id_2)
 
     async def test_get_author_by_id(self) -> None:
-        saved_author = self._create_valid_author()
-        await saved_author.save()
+        saved_author_model_instance = await self._populate_author()
 
-        author_id = saved_author.id
+        author_id = saved_author_model_instance.id
         author_from_db = await self.repository.get_author_by_id(author_id=author_id)
 
-        self.assertAuthorsAreCompletelyEqual(author_from_db, saved_author)
+        self.assertAuthorAndModelAreCompletelyEqual(
+            author_from_db, saved_author_model_instance
+        )
 
     async def test_get_author_by_id_raises_not_found(self) -> None:
         non_existent_author_id = str(uuid4())
@@ -98,7 +94,7 @@ class TortoiseAuthorRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
             "44444444-4444-4444-4444-444444444444",
         ]
         for author_id, name in zip(id_list, HUMAN_NAMES[:4]):
-            await TortoiseAuthor.create(id=author_id, name=name)
+            await AuthorModel.create(id=author_id, name=name)
         id_list = [
             "22222222-2222-2222-2222-222222222222",
             "44444444-4444-4444-4444-444444444444",
@@ -116,36 +112,39 @@ class TortoiseAuthorRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
         self.assertEmpty(authors_mapping)
 
     async def test_get_authors_in_bulk_ignores_not_found(self) -> None:
-        non_existent_id = "12341234-1234-1234-1234-123412341234"
+        non_existent_id = str(uuid4())
         authors_mapping = await self.repository.get_authors_in_bulk(
             id_list=[non_existent_id]
         )
         self.assertNotIn(non_existent_id, authors_mapping)
 
     async def test_save_creates_if_does_not_exist(self) -> None:
-        author = self._create_valid_author()
+        author = self._create_author()
         await self.repository.save(author)
-        author_from_get = await TortoiseAuthor.get(id=author.id)
-        self.assertAuthorsAreCompletelyEqual(author_from_get, author)
+        author_model_instance_from_get = await AuthorModel.get(id=author.id)
+        self.assertAuthorAndModelAreCompletelyEqual(
+            author, author_model_instance_from_get
+        )
 
     async def test_save_updates_if_exists(self) -> None:
-        author = self._create_valid_author()
-        await author.save()
+        author_model_instance = await self._populate_author()
 
         new_name = "Tim Gray"
-        author = TortoiseAuthor(id=author.id, name=new_name)
+        author = Author(id_=author_model_instance.id, name=new_name)
         await self.repository.save(author)
 
-        author_from_get = await TortoiseAuthor.get(id=author.id)
-        self.assertAuthorsAreCompletelyEqual(author_from_get, author)
+        author_model_instance_from_get = await AuthorModel.get(id=author.id)
+        self.assertAuthorAndModelAreCompletelyEqual(
+            author, author_model_instance_from_get
+        )
 
     async def test_remove(self) -> None:
-        author = self._create_valid_author()
-        await author.save()
+        author_model_instance = await self._populate_author()
+        author = Author(id_=author_model_instance.id, name=author_model_instance.name)
 
         await self.repository.remove(author=author)
 
-        self.assertFalse(await TortoiseAuthor.exists(id=author.id))
+        self.assertFalse(await AuthorModel.exists(id=author_model_instance.id))
 
 
 class TortoiseDefaultAuthorRepositoryTests(IsolatedAsyncioTestCase):
