@@ -8,6 +8,7 @@ from news_fastapi.domain.author import (
     AuthorRepository,
     DefaultAuthorRepository,
 )
+from news_fastapi.domain.delete_author import can_delete_author
 from news_fastapi.domain.news_article import NewsArticleRepository
 from news_fastapi.domain.seed_work.events import DomainEventBuffer
 from news_fastapi.utils.sentinels import Undefined, UndefinedType
@@ -74,11 +75,7 @@ class AuthorsService:
         async with self._transaction_manager.in_transaction():
             self._auth.check_delete_author(author_id)
             author = await self._author_repository.get_author_by_id(author_id)
-            news_for_author = await self._news_article_repository.count_for_author(
-                author.id
-            )
-            has_author_published_news = news_for_author > 0
-            if has_author_published_news:
+            if not await can_delete_author(author_id, self._news_article_repository):
                 raise DeleteAuthorError(
                     "Can't delete an author with at least one published news article"
                 )

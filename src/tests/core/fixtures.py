@@ -4,7 +4,7 @@ from news_fastapi.core.authors.auth import AuthorsAuth
 from news_fastapi.core.transaction import TransactionContextManager, TransactionManager
 
 
-class TestAuthorsAuth(AuthorsAuth):
+class AuthorsAuthFixture(AuthorsAuth):
     _current_user_id: str
     _can_create_author: bool
     _can_update_author: bool
@@ -44,7 +44,7 @@ class TestAuthorsAuth(AuthorsAuth):
         return self._current_user_id
 
 
-class TestCoreTransactionManager(TransactionManager):
+class TransactionManagerFixture(TransactionManager):
     def in_transaction(self) -> TransactionContextManager:
         return self._in_transaction()
 

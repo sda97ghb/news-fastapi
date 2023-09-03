@@ -9,24 +9,22 @@ from news_fastapi.core.authors.services import (
     DefaultAuthorsService,
 )
 from news_fastapi.core.exceptions import AuthorizationError
-from news_fastapi.domain.author import AuthorDeleted
+from news_fastapi.domain.author import Author, AuthorDeleted, AuthorFactory
 from news_fastapi.domain.seed_work.events import DomainEvent, DomainEventBuffer
 from news_fastapi.utils.exceptions import NotFoundError
-from tests.core.fixtures import TestAuthorsAuth, TestCoreTransactionManager
+from tests.core.fixtures import AuthorsAuthFixture, TransactionManagerFixture
 from tests.domain.fixtures import (
-    TestAuthor,
-    TestAuthorFactory,
-    TestAuthorRepository,
-    TestDefaultAuthorRepository,
-    TestNewsArticleRepository,
+    AuthorRepositoryFixture,
+    DefaultAuthorRepositoryFixture,
+    NewsArticleRepositoryFixture,
 )
 from tests.fixtures import HUMAN_NAMES
 
 
 class AuthorsListServiceTests(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
-        self.author_factory = TestAuthorFactory()
-        self.author_repository = TestAuthorRepository()
+        self.author_factory = AuthorFactory()
+        self.author_repository = AuthorRepositoryFixture()
         self.authors_list_service = AuthorsListService(
             author_repository=self.author_repository
         )
@@ -61,13 +59,13 @@ class AuthorsListServiceTests(IsolatedAsyncioTestCase):
 
 class AuthorsServiceTests(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
-        self.authors_auth = TestAuthorsAuth(
+        self.authors_auth = AuthorsAuthFixture(
             current_user_id="11111111-1111-1111-1111-111111111111"
         )
-        self.transaction_manager = TestCoreTransactionManager()
-        self.author_factory = TestAuthorFactory()
-        self.author_repository = TestAuthorRepository()
-        self.news_article_repository = TestNewsArticleRepository()
+        self.transaction_manager = TransactionManagerFixture()
+        self.author_factory = AuthorFactory()
+        self.author_repository = AuthorRepositoryFixture()
+        self.news_article_repository = NewsArticleRepositoryFixture()
         self.domain_event_buffer = DomainEventBuffer()
         self.authors_service = AuthorsService(
             auth=self.authors_auth,
@@ -78,7 +76,7 @@ class AuthorsServiceTests(IsolatedAsyncioTestCase):
             domain_event_buffer=self.domain_event_buffer,
         )
 
-    async def _create_author(self) -> str:
+    async def _populate_author(self) -> str:
         author_id = "22222222-2222-2222-2222-222222222222"
         author_to_save = self.author_factory.create_author(
             author_id=author_id, name="John Doe"
@@ -87,7 +85,7 @@ class AuthorsServiceTests(IsolatedAsyncioTestCase):
         return author_id
 
     async def test_get_author(self) -> None:
-        author_id = await self._create_author()
+        author_id = await self._populate_author()
         author_from_service = await self.authors_service.get_author(author_id=author_id)
         self.assertEqual(author_from_service.id, author_id)
 
@@ -105,7 +103,7 @@ class AuthorsServiceTests(IsolatedAsyncioTestCase):
             await self.authors_service.create_author(name="John Doe")
 
     async def test_update_author(self) -> None:
-        author_id = await self._create_author()
+        author_id = await self._populate_author()
         new_name = "Tim Gray"
 
         await self.authors_service.update_author(author_id=author_id, new_name=new_name)
@@ -121,7 +119,7 @@ class AuthorsServiceTests(IsolatedAsyncioTestCase):
             )
 
     async def test_delete_author(self) -> None:
-        author_id = await self._create_author()
+        author_id = await self._populate_author()
 
         await self.authors_service.delete_author(author_id)
 
@@ -136,7 +134,7 @@ class AuthorsServiceTests(IsolatedAsyncioTestCase):
             )
 
     async def test_delete_author_emits_author_deleted_domain_event(self) -> None:
-        author_id = await self._create_author()
+        author_id = await self._populate_author()
 
         await self.authors_service.delete_author(author_id)
 
@@ -160,10 +158,10 @@ class AuthorsServiceTests(IsolatedAsyncioTestCase):
 
 class DefaultAuthorsServiceTests(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
-        self.authors_auth = TestAuthorsAuth(
+        self.authors_auth = AuthorsAuthFixture(
             current_user_id="33333333-3333-3333-3333-333333333333"
         )
-        self.default_author_repository = TestDefaultAuthorRepository()
+        self.default_author_repository = DefaultAuthorRepositoryFixture()
         self.author_repository = Mock()
         self.default_authors_service = DefaultAuthorsService(
             auth=self.authors_auth,
@@ -178,7 +176,7 @@ class DefaultAuthorsServiceTests(IsolatedAsyncioTestCase):
             user_id=user_id, author_id=author_id
         )
         self.author_repository.get_author_by_id = AsyncMock(
-            return_value=TestAuthor(id=author_id, name="John Doe")
+            return_value=Author(id_=author_id, name="John Doe")
         )
         author = await self.default_authors_service.get_default_author(user_id=user_id)
         self.assertIsNotNone(author)

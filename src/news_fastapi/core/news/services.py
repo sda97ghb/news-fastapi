@@ -78,5 +78,5 @@ class NewsService:
         news_article = await self._news_article_repository.get_news_article_by_id(
             news_article_id=news_article_id
         )
-        news_article.revoke_reason = reason
+        news_article.revoke(reason=reason)
         await self._news_article_repository.save(news_article)

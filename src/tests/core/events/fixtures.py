@@ -4,12 +4,13 @@ from typing import Any
 from news_fastapi.domain.seed_work.events import DomainEvent
 
 
-@dataclass
+@dataclass(kw_only=True, frozen=True)
 class TestDomainEvent(DomainEvent):
     def _to_json_extra_fields(self) -> dict[str, Any]:
         return {}
 
 
+@dataclass(kw_only=True, frozen=True)
 class AnotherTestDomainEvent(DomainEvent):
     def _to_json_extra_fields(self) -> dict[str, Any]:
         return {}

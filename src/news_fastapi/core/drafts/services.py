@@ -12,6 +12,7 @@ from news_fastapi.domain.author import Author, AuthorRepository, DefaultAuthorRe
 from news_fastapi.domain.draft import Draft, DraftFactory, DraftRepository
 from news_fastapi.domain.news_article import NewsArticle, NewsArticleRepository
 from news_fastapi.domain.publish import PublishService
+from news_fastapi.domain.value_objects import Image
 from news_fastapi.utils.exceptions import NotFoundError
 from news_fastapi.utils.sentinels import Undefined, UndefinedType
 
@@ -124,6 +125,7 @@ class DraftsService:
         new_headline: str | UndefinedType = Undefined,
         new_date_published: DateTime | None | UndefinedType = Undefined,
         new_author_id: str | UndefinedType = Undefined,
+        new_image: Image | None | UndefinedType = Undefined,
         new_text: str | UndefinedType = Undefined,
     ) -> None:
         async with self._transaction_manager.in_transaction():
@@ -137,6 +139,8 @@ class DraftsService:
                 draft.date_published = new_date_published
             if new_author_id is not Undefined:
                 draft.author_id = new_author_id
+            if new_image is not Undefined:
+                draft.image = new_image
             if new_text is not Undefined:
                 draft.text = new_text
             await self._draft_repository.save(draft)
