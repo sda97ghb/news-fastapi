@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from datetime import datetime as DateTime
 from typing import Self
 
-from news_fastapi.domain.drafts import Draft, DraftRepository
-from news_fastapi.domain.news import (
+from news_fastapi.domain.draft import Draft, DraftRepository
+from news_fastapi.domain.news_article import (
     NewsArticle,
     NewsArticleFactory,
     NewsArticleRepository,
@@ -42,6 +42,48 @@ class TooLongHeadlineProblem(DraftValidationProblem):
 
 
 @dataclass
+class NoImageProblem(DraftValidationProblem):
+    message: str = "No image set"
+    user_message: str = "Не задано изображение"
+
+
+@dataclass
+class EmptyImageURLProblem(DraftValidationProblem):
+    message: str = "Empty image url"
+    user_message: str = "Не задан URL изображения"
+
+
+@dataclass
+class EmptyImageDescriptionProblem(DraftValidationProblem):
+    message: str = "Empty image description"
+    user_message: str = "Подпись под изображением не заполнена"
+
+
+@dataclass
+class TooLongImageDescriptionProblem(DraftValidationProblem):
+    current_length: int
+    max_length: int
+
+    @classmethod
+    def create(cls, current_length: int, max_length: int) -> Self:
+        return cls(
+            message="Too long image description",
+            user_message=(
+                f"Подпись под изображением слишком длинная (сейчас {current_length} "
+                f"символов, должна быть не больше {max_length} символов)"
+            ),
+            current_length=current_length,
+            max_length=max_length,
+        )
+
+
+@dataclass
+class EmptyImageAuthorProblem(DraftValidationProblem):
+    message: str = "Empty image author"
+    user_message: str = "Не указан автор изображения"
+
+
+@dataclass
 class EmptyTextProblem(DraftValidationProblem):
     message: str = "Empty text"
     user_message: str = "Текст не заполнен"
@@ -51,15 +93,26 @@ class DraftValidator:
     _draft: Draft
     _problems: list[DraftValidationProblem]
     _max_headline_length: int
+    _max_image_description_length: int
 
-    def __init__(self, draft: Draft, max_headline_length: int = 60) -> None:
+    def __init__(
+        self,
+        draft: Draft,
+        max_headline_length: int = 60,
+        max_image_description_length: int = 200,
+    ) -> None:
         self._draft = draft
         self._problems = []
         self._max_headline_length = max_headline_length
+        self._max_image_description_length = max_image_description_length
+
+    def _append_problem(self, problem: DraftValidationProblem) -> None:
+        self._problems.append(problem)
 
     def validate(self) -> list[DraftValidationProblem]:
         self._problems = []
         self._validate_headline()
+        self._validate_image()
         self._validate_text()
         return self._problems
 
@@ -67,17 +120,37 @@ class DraftValidator:
         headline = self._draft.headline.strip()
         headline_length = len(headline)
         if headline_length == 0:
-            self._problems.append(EmptyHeadlineProblem())
+            self._append_problem(EmptyHeadlineProblem())
         if headline_length > self._max_headline_length:
-            self._problems.append(
+            self._append_problem(
                 TooLongHeadlineProblem.create(
                     current_length=headline_length, max_length=self._max_headline_length
                 )
             )
 
+    def _validate_image(self) -> None:
+        image = self._draft.image
+        if image is None:
+            self._append_problem(NoImageProblem())
+            return
+        if image.url == "":
+            self._append_problem(EmptyImageURLProblem())
+        description_length = len(image.description)
+        if description_length == 0:
+            self._append_problem(EmptyImageDescriptionProblem())
+        if description_length > self._max_image_description_length:
+            self._append_problem(
+                TooLongImageDescriptionProblem.create(
+                    current_length=description_length,
+                    max_length=self._max_image_description_length,
+                )
+            )
+        if image.author == "":
+            self._append_problem(EmptyImageAuthorProblem())
+
     def _validate_text(self) -> None:
         if len(self._draft.text.strip()) == 0:
-            self._problems.append(EmptyTextProblem())
+            self._append_problem(EmptyTextProblem())
 
 
 class PublishDraftError(Exception):
@@ -143,11 +216,14 @@ class PublishService:
 
     async def _create_news_article_from_scratch(self, draft: Draft) -> NewsArticle:
         news_article_id = await self._news_article_repository.next_identity()
+        if draft.image is None:
+            raise ValueError("Draft with no image can not be published")
         news_article = self._news_article_factory.create_news_article_from_scratch(
             news_article_id=news_article_id,
             headline=draft.headline,
             date_published=pick_date_published(draft.date_published),
             author_id=draft.author_id,
+            image=draft.image,
             text=draft.text,
         )
         return news_article
@@ -165,7 +241,10 @@ class PublishService:
     def _fill_news_article_from_draft(
         self, news_article: NewsArticle, draft: Draft
     ) -> None:
+        if draft.image is None:
+            raise ValueError("Draft with no image can not be published")
         news_article.headline = draft.headline
         news_article.date_published = pick_date_published(draft.date_published)
         news_article.author_id = draft.author_id
+        news_article.image = draft.image
         news_article.text = draft.text

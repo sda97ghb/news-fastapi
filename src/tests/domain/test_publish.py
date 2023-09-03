@@ -1,15 +1,22 @@
+from dataclasses import replace
 from datetime import datetime as DateTime, timedelta as TimeDelta
 from unittest import IsolatedAsyncioTestCase, TestCase
 
-from news_fastapi.domain.drafts import Draft
-from news_fastapi.domain.news import NewsArticle
+from news_fastapi.domain.common import Image
+from news_fastapi.domain.draft import Draft
+from news_fastapi.domain.news_article import NewsArticle
 from news_fastapi.domain.publish import (
     DraftValidationProblem,
     DraftValidator,
     EmptyHeadlineProblem,
+    EmptyImageAuthorProblem,
+    EmptyImageDescriptionProblem,
+    EmptyImageURLProblem,
     EmptyTextProblem,
+    NoImageProblem,
     PublishService,
     TooLongHeadlineProblem,
+    TooLongImageDescriptionProblem,
     pick_date_published,
 )
 from tests.domain.fixtures import (
@@ -25,6 +32,7 @@ from tests.utils import AssertMixin
 class DraftValidatorTests(AssertMixin, TestCase):
     def setUp(self) -> None:
         self.max_headline_length = 100
+        self.max_image_description_length = 200
 
     def create_valid_draft(self) -> TestDraft:
         return TestDraft(
@@ -33,51 +41,105 @@ class DraftValidatorTests(AssertMixin, TestCase):
             headline="The Headline",
             date_published=DateTime.fromisoformat("2023-01-01T12:00:00+0000"),
             author_id="22222222-2222-2222-2222-222222222222",
+            image=Image(
+                url="https://example.com/images/1234",
+                description="The description of the image",
+                author="Emma Brown",
+            ),
             text="The news article's text.",
             created_by_user_id="33333333-3333-3333-3333-333333333333",
             is_published=False,
         )
 
-    def _validate_draft(self, draft: Draft) -> list[DraftValidationProblem]:
+    def validate_draft(self, draft: Draft) -> list[DraftValidationProblem]:
         validator = DraftValidator(
-            draft=draft, max_headline_length=self.max_headline_length
+            draft=draft,
+            max_headline_length=self.max_headline_length,
+            max_image_description_length=self.max_image_description_length,
         )
         problems = validator.validate()
         return problems
 
+    def assertProblemFound(
+        self,
+        problems_list: list[DraftValidationProblem],
+        problem_class: type[DraftValidationProblem],
+        **kwargs,
+    ) -> None:
+        for problem in problems_list:
+            if isinstance(problem, problem_class):
+                if all(
+                    getattr(problem, attr_name) == expected_value
+                    for attr_name, expected_value in kwargs.items()
+                ):
+                    return
+        self.fail(
+            f"Problem not found {problem_class}({kwargs}). "
+            f"Found problems: {problems_list}"
+        )
+
     def test_validate(self) -> None:
         valid_draft = self.create_valid_draft()
-        problems_list = self._validate_draft(valid_draft)
+        problems_list = self.validate_draft(valid_draft)
         self.assertEmpty(problems_list)
 
-    def test_validate_empty_headline_is_invalid(self) -> None:
+    def test_validate_empty_headline_problem(self) -> None:
         draft = self.create_valid_draft()
         draft.headline = ""
-        problems_list = self._validate_draft(draft)
-        for problem in problems_list:
-            if isinstance(problem, EmptyHeadlineProblem):
-                return
-        self.fail("Problems list doesn't contain EmptyHeadlineProblem")
+        problems_list = self.validate_draft(draft)
+        self.assertProblemFound(problems_list, EmptyHeadlineProblem)
 
-    def test_validate_too_long_headline_is_invalid(self) -> None:
+    def test_validate_too_long_headline_problem(self) -> None:
         draft = self.create_valid_draft()
         draft.headline = "A" * 1000
-        problems_list = self._validate_draft(draft)
-        for problem in problems_list:
-            if isinstance(problem, TooLongHeadlineProblem):
-                self.assertEqual(problem.current_length, 1000)
-                self.assertEqual(problem.max_length, self.max_headline_length)
-                return
-        self.fail("Problems list doesn't contain TooLongHeadlineProblem")
+        problems_list = self.validate_draft(draft)
+        self.assertProblemFound(
+            problems_list,
+            TooLongHeadlineProblem,
+            current_length=1000,
+            max_length=self.max_headline_length,
+        )
 
-    def test_validate_empty_text_is_invalid(self) -> None:
+    def test_validate_no_image_problem(self) -> None:
+        draft = self.create_valid_draft()
+        draft.image = None
+        problems_list = self.validate_draft(draft)
+        self.assertProblemFound(problems_list, NoImageProblem)
+
+    def test_validate_empty_image_url_problem(self) -> None:
+        draft = self.create_valid_draft()
+        draft.image = replace(draft.image, url="")
+        problems_list = self.validate_draft(draft)
+        self.assertProblemFound(problems_list, EmptyImageURLProblem)
+
+    def test_validate_empty_image_description_problem(self) -> None:
+        draft = self.create_valid_draft()
+        draft.image = replace(draft.image, description="")
+        problems_list = self.validate_draft(draft)
+        self.assertProblemFound(problems_list, EmptyImageDescriptionProblem)
+
+    def test_validate_too_long_image_description_problem(self) -> None:
+        draft = self.create_valid_draft()
+        draft.image = replace(draft.image, description="A" * 1000)
+        problems_list = self.validate_draft(draft)
+        self.assertProblemFound(
+            problems_list,
+            TooLongImageDescriptionProblem,
+            current_length=1000,
+            max_length=self.max_image_description_length,
+        )
+
+    def test_validate_empty_image_author_problem(self) -> None:
+        draft = self.create_valid_draft()
+        draft.image = replace(draft.image, author="")
+        problems_list = self.validate_draft(draft)
+        self.assertProblemFound(problems_list, EmptyImageAuthorProblem)
+
+    def test_validate_empty_text_problem(self) -> None:
         draft = self.create_valid_draft()
         draft.text = ""
-        problems_list = self._validate_draft(draft)
-        for problem in problems_list:
-            if isinstance(problem, EmptyTextProblem):
-                return
-        self.fail("Problems list doesn't contain EmptyTextProblem")
+        problems_list = self.validate_draft(draft)
+        self.assertProblemFound(problems_list, EmptyTextProblem)
 
 
 class PickDatePublishedTests(TestCase):
@@ -122,6 +184,7 @@ class PublishServiceTests(IsolatedAsyncioTestCase):
     ) -> None:
         self.assertEqual(news_article.headline, draft.headline)
         self.assertEqual(news_article.author_id, draft.author_id)
+        self.assertEqual(news_article.image, draft.image)
         self.assertEqual(news_article.text, draft.text)
 
     async def _create_news_article(self) -> NewsArticle:
@@ -132,6 +195,11 @@ class PublishServiceTests(IsolatedAsyncioTestCase):
             headline="The Headline",
             date_published=DateTime.fromisoformat("2023-01-01T12:00:00+0000"),
             author_id=author_id,
+            image=Image(
+                url="https://example.com/images/1234",
+                description="The description of the image",
+                author="Emma Brown",
+            ),
             text="The text of the article.",
         )
         await self.news_article_repository.save(news_article)
@@ -145,6 +213,11 @@ class PublishServiceTests(IsolatedAsyncioTestCase):
             draft_id=draft_id, user_id=user_id, author_id=author_id
         )
         draft.headline = "The Headline"
+        draft.image = Image(
+            url="https://example.com/images/1234",
+            description="The description of the image",
+            author="Emma Brown",
+        )
         draft.text = "The text of the article."
         await self.draft_repository.save(draft)
         return draft
@@ -155,8 +228,13 @@ class PublishServiceTests(IsolatedAsyncioTestCase):
         draft = self.draft_factory.create_draft_from_news_article(
             news_article=news_article, draft_id=draft_id, user_id=user_id
         )
-        draft.headline = "New Headline"
-        draft.text = "New text."
+        draft.headline = "NEW Headline"
+        draft.image = Image(
+            url="https://example.com/images/9999999-NEW",
+            description="NEW description of the image",
+            author="NEW image author",
+        )
+        draft.text = "NEW text."
         draft.author_id = "77777777-7777-7777-7777-777777777777"
         await self.draft_repository.save(draft)
         return draft

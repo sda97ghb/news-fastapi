@@ -4,14 +4,15 @@ from datetime import datetime as DateTime
 from typing import Collection, Mapping
 from uuid import uuid4
 
-from news_fastapi.domain.authors import (
+from news_fastapi.domain.author import (
     Author,
     AuthorFactory,
     AuthorRepository,
     DefaultAuthorRepository,
 )
-from news_fastapi.domain.drafts import Draft, DraftFactory, DraftRepository
-from news_fastapi.domain.news import (
+from news_fastapi.domain.common import Image
+from news_fastapi.domain.draft import Draft, DraftFactory, DraftRepository
+from news_fastapi.domain.news_article import (
     NewsArticle,
     NewsArticleFactory,
     NewsArticleListFilter,
@@ -27,6 +28,7 @@ class TestDraft:
     headline: str
     date_published: DateTime | None
     author_id: str
+    image: Image | None
     text: str
     created_by_user_id: str
     is_published: bool
@@ -40,6 +42,7 @@ class TestDraftFactory(DraftFactory):
         headline: str,
         date_published: DateTime | None,
         author_id: str,
+        image: Image | None,
         text: str,
         created_by_user_id: str,
         is_published: bool,
@@ -50,6 +53,7 @@ class TestDraftFactory(DraftFactory):
             headline=headline,
             date_published=date_published,
             author_id=author_id,
+            image=image,
             text=text,
             created_by_user_id=created_by_user_id,
             is_published=is_published,
@@ -103,6 +107,7 @@ class TestNewsArticle:
     headline: str
     date_published: DateTime
     author_id: str
+    image: Image
     text: str
     revoke_reason: str | None
 
@@ -114,6 +119,7 @@ class TestNewsArticleFactory(NewsArticleFactory):
         headline: str,
         date_published: DateTime,
         author_id: str,
+        image: Image,
         text: str,
         revoke_reason: str | None,
     ) -> NewsArticle:
@@ -122,6 +128,7 @@ class TestNewsArticleFactory(NewsArticleFactory):
             headline=headline,
             date_published=date_published,
             author_id=author_id,
+            image=image,
             text=text,
             revoke_reason=revoke_reason,
         )

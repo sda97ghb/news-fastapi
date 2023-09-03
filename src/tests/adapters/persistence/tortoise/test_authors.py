@@ -8,7 +8,7 @@ from news_fastapi.adapters.persistence.tortoise.authors import (
     TortoiseAuthorRepository,
     TortoiseDefaultAuthorRepository,
 )
-from news_fastapi.domain.authors import Author
+from news_fastapi.domain.author import Author
 from news_fastapi.utils.exceptions import NotFoundError
 from tests.adapters.persistence.tortoise.fixtures import tortoise_orm_lifespan
 from tests.fixtures import HUMAN_NAMES

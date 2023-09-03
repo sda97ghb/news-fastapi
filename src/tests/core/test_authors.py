@@ -9,7 +9,7 @@ from news_fastapi.core.authors.services import (
     DefaultAuthorsService,
 )
 from news_fastapi.core.exceptions import AuthorizationError
-from news_fastapi.domain.authors import AuthorDeleted
+from news_fastapi.domain.author import AuthorDeleted
 from news_fastapi.domain.events import DomainEvent, DomainEventBuffer
 from news_fastapi.utils.exceptions import NotFoundError
 from tests.core.fixtures import TestAuthorsAuth, TestCoreTransactionManager
@@ -181,6 +181,7 @@ class DefaultAuthorsServiceTests(IsolatedAsyncioTestCase):
             return_value=TestAuthor(id=author_id, name="John Doe")
         )
         author = await self.default_authors_service.get_default_author(user_id=user_id)
+        self.assertIsNotNone(author)
         self.assertEqual(author.id, author_id)
 
     async def test_set_default_author(self) -> None:

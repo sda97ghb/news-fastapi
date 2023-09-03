@@ -8,13 +8,9 @@ from news_fastapi.core.drafts.exceptions import (
     UpdateDraftError,
 )
 from news_fastapi.core.transaction import TransactionManager
-from news_fastapi.domain.authors import (
-    Author,
-    AuthorRepository,
-    DefaultAuthorRepository,
-)
-from news_fastapi.domain.drafts import Draft, DraftFactory, DraftRepository
-from news_fastapi.domain.news import NewsArticle, NewsArticleRepository
+from news_fastapi.domain.author import Author, AuthorRepository, DefaultAuthorRepository
+from news_fastapi.domain.draft import Draft, DraftFactory, DraftRepository
+from news_fastapi.domain.news_article import NewsArticle, NewsArticleRepository
 from news_fastapi.domain.publish import PublishService
 from news_fastapi.utils.exceptions import NotFoundError
 from news_fastapi.utils.sentinels import Undefined, UndefinedType
@@ -117,6 +113,7 @@ class DraftsService:
             headline=news_article.headline,
             date_published=news_article.date_published,
             author_id=news_article.author_id,
+            image=news_article.image,
             text=news_article.text,
             created_by_user_id=current_user_id,
             is_published=False,

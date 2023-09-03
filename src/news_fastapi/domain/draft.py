@@ -3,7 +3,8 @@ from collections.abc import Collection
 from datetime import datetime as DateTime
 from typing import Protocol, runtime_checkable
 
-from news_fastapi.domain.news import NewsArticle
+from news_fastapi.domain.common import Image
+from news_fastapi.domain.news_article import NewsArticle
 
 
 @runtime_checkable
@@ -13,6 +14,7 @@ class Draft(Protocol):
     headline: str
     date_published: DateTime | None
     author_id: str
+    image: Image | None
     text: str
     created_by_user_id: str
     is_published: bool
@@ -27,6 +29,7 @@ class DraftFactory(ABC):
         headline: str,
         date_published: DateTime | None,
         author_id: str,
+        image: Image | None,
         text: str,
         created_by_user_id: str,
         is_published: bool,
@@ -42,6 +45,7 @@ class DraftFactory(ABC):
             headline="",
             date_published=None,
             author_id=author_id,
+            image=None,
             text="",
             created_by_user_id=user_id,
             is_published=False,
@@ -56,6 +60,7 @@ class DraftFactory(ABC):
             headline=news_article.headline,
             date_published=news_article.date_published,
             author_id=news_article.author_id,
+            image=news_article.image,
             text=news_article.text,
             created_by_user_id=user_id,
             is_published=False,

@@ -5,7 +5,7 @@ from tortoise import Model
 from tortoise.exceptions import DoesNotExist, IntegrityError
 from tortoise.fields import TextField
 
-from news_fastapi.domain.authors import (
+from news_fastapi.domain.author import (
     Author,
     AuthorFactory,
     AuthorRepository,

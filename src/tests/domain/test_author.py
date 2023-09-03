@@ -1,7 +1,7 @@
 from datetime import datetime as DateTime
 from unittest import TestCase
 
-from news_fastapi.domain.authors import AuthorDeleted
+from news_fastapi.domain.author import AuthorDeleted
 
 
 class AuthorDeletedTests(TestCase):

@@ -6,7 +6,8 @@ from tortoise import Model
 from tortoise.exceptions import DoesNotExist
 from tortoise.fields import BooleanField, DatetimeField, TextField
 
-from news_fastapi.domain.drafts import Draft, DraftFactory, DraftRepository
+from news_fastapi.domain.common import Image
+from news_fastapi.domain.draft import Draft, DraftFactory, DraftRepository
 from news_fastapi.utils.exceptions import NotFoundError
 
 
@@ -16,9 +17,35 @@ class TortoiseDraft(Model):
     headline: str = TextField()
     date_published: DateTime | None = DatetimeField(null=True)
     author_id: str = TextField()
+    _image_url: str | None = TextField(source_field="image_url", null=True)
+    _image_description: str | None = TextField(
+        source_field="image_description", null=True
+    )
+    _image_author: str | None = TextField(source_field="image_author", null=True)
     text: str = TextField()
     created_by_user_id: str = TextField()
     is_published: bool = BooleanField()  # type: ignore[assignment]
+
+    @property
+    def image(self) -> Image | None:
+        if self._image_url and self._image_description and self._image_author:
+            return Image(
+                url=self._image_url,
+                description=self._image_description,
+                author=self._image_author,
+            )
+        return None
+
+    @image.setter
+    def image(self, new_image: Image | None) -> None:
+        if new_image is None:
+            self._image_url = None
+            self._image_description = None
+            self._image_author = None
+        else:
+            self._image_url = new_image.url
+            self._image_description = new_image.description
+            self._image_author = new_image.author
 
     def __assert_implements_protocol(self) -> Draft:
         # pylint: disable=unused-private-member
@@ -36,11 +63,12 @@ class TortoiseDraftFactory(DraftFactory):
         headline: str,
         date_published: DateTime | None,
         author_id: str,
+        image: Image | None,
         text: str,
         created_by_user_id: str,
         is_published: bool,
     ) -> Draft:
-        return TortoiseDraft(
+        draft = TortoiseDraft(
             id=draft_id,
             news_article_id=news_article_id,
             headline=headline,
@@ -50,6 +78,8 @@ class TortoiseDraftFactory(DraftFactory):
             created_by_user_id=created_by_user_id,
             is_published=is_published,
         )
+        draft.image = image
+        return draft
 
 
 class TortoiseDraftRepository(DraftRepository):

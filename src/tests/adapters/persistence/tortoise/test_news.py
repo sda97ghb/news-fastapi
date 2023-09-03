@@ -7,7 +7,8 @@ from news_fastapi.adapters.persistence.tortoise.news import (
     TortoiseNewsArticleFactory,
     TortoiseNewsArticleRepository,
 )
-from news_fastapi.domain.news import NewsArticle, NewsArticleListFilter
+from news_fastapi.domain.common import Image
+from news_fastapi.domain.news_article import NewsArticle, NewsArticleListFilter
 from news_fastapi.utils.exceptions import NotFoundError
 from tests.adapters.persistence.tortoise.fixtures import tortoise_orm_lifespan
 from tests.fixtures import HEADLINES, PREDICTABLE_IDS_A, TEXTS
@@ -23,6 +24,11 @@ class TortoiseNewsArticleFactoryTests(TestCase):
         headline = "The Headline"
         date_published = DateTime.fromisoformat("2023-01-01T12:00:00+0000")
         author_id = "22222222-2222-2222-2222-222222222222"
+        image = Image(
+            url="https://example.com/images/1234",
+            description="The description of the image",
+            author="Emma Brown",
+        )
         text = "The text of the article."
         revoke_reason = "Fake"
         news_article = self.factory.create_news_article(
@@ -30,6 +36,7 @@ class TortoiseNewsArticleFactoryTests(TestCase):
             headline=headline,
             date_published=date_published,
             author_id=author_id,
+            image=image,
             text=text,
             revoke_reason=revoke_reason,
         )
@@ -37,6 +44,7 @@ class TortoiseNewsArticleFactoryTests(TestCase):
         self.assertEqual(news_article.headline, headline)
         self.assertEqual(news_article.date_published, date_published)
         self.assertEqual(news_article.author_id, author_id)
+        self.assertEqual(news_article.image, image)
         self.assertEqual(news_article.text, text)
         self.assertEqual(news_article.revoke_reason, revoke_reason)
 
@@ -51,7 +59,7 @@ class TortoiseNewsArticleRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
     def _create_valid_news_article(
         self, news_article_id: str = "11111111-1111-1111-1111-111111111111"
     ) -> TortoiseNewsArticle:
-        return TortoiseNewsArticle(
+        news_article = TortoiseNewsArticle(
             id=news_article_id,
             headline="The Headline",
             date_published=DateTime.fromisoformat("2023-01-01T12:00:00+0000"),
@@ -59,6 +67,12 @@ class TortoiseNewsArticleRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
             text="The text of the news article.",
             revoke_reason=None,
         )
+        news_article.image = Image(
+            url="https://example.com/images/1234",
+            description="The description of the image",
+            author="Emma Brown",
+        )
+        return news_article
 
     async def _populate_news_articles(
         self,
@@ -77,6 +91,11 @@ class TortoiseNewsArticleRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
                 author_id=author_id,
                 text=text,
                 revoke_reason=None,
+            )
+            news_article.image = Image(
+                url="https://example.com/images/1234",
+                description="The description of the image",
+                author="Emma Brown",
             )
             await news_article.save()
 
@@ -129,6 +148,11 @@ class TortoiseNewsArticleRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
         news_article.headline = "NEW Headline"
         news_article.date_published = DateTime.fromisoformat("2023-05-15T15:00:00+0000")
         news_article.author_id = "77777777-7777-7777-7777-777777777777"
+        news_article.image = Image(
+            url="https://example.com/images/99999-NEW",
+            description="NEW description of the image",
+            author="NEW Author",
+        )
         news_article.text = "NEW text."
         news_article.revoke_reason = "Fake"
         await self.repository.save(news_article)

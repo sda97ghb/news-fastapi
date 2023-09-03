@@ -1,7 +1,7 @@
 from news_fastapi.core.authors.auth import AuthorsAuth
 from news_fastapi.core.authors.exceptions import DeleteAuthorError
 from news_fastapi.core.transaction import TransactionManager
-from news_fastapi.domain.authors import (
+from news_fastapi.domain.author import (
     Author,
     AuthorDeleted,
     AuthorFactory,
@@ -9,7 +9,7 @@ from news_fastapi.domain.authors import (
     DefaultAuthorRepository,
 )
 from news_fastapi.domain.events import DomainEventBuffer
-from news_fastapi.domain.news import NewsArticleRepository
+from news_fastapi.domain.news_article import NewsArticleRepository
 from news_fastapi.utils.sentinels import Undefined, UndefinedType
 
 

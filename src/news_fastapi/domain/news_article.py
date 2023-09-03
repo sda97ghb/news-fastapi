@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime as DateTime
 from typing import Collection, Literal, Protocol, runtime_checkable
 
+from news_fastapi.domain.common import Image
 from news_fastapi.utils.sentinels import Undefined, UndefinedType
 
 
@@ -12,6 +13,7 @@ class NewsArticle(Protocol):
     headline: str
     date_published: DateTime
     author_id: str
+    image: Image
     text: str
     revoke_reason: str | None
 
@@ -24,6 +26,7 @@ class NewsArticleFactory(ABC):
         headline: str,
         date_published: DateTime,
         author_id: str,
+        image: Image,
         text: str,
         revoke_reason: str | None,
     ) -> NewsArticle:
@@ -35,6 +38,7 @@ class NewsArticleFactory(ABC):
         headline: str,
         date_published: DateTime,
         author_id: str,
+        image: Image,
         text: str,
     ) -> NewsArticle:
         return self.create_news_article(
@@ -42,6 +46,7 @@ class NewsArticleFactory(ABC):
             headline=headline,
             date_published=date_published,
             author_id=author_id,
+            image=image,
             text=text,
             revoke_reason=None,
         )

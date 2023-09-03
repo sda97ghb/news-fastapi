@@ -7,7 +7,8 @@ from news_fastapi.adapters.persistence.tortoise.drafts import (
     TortoiseDraftFactory,
     TortoiseDraftRepository,
 )
-from news_fastapi.domain.drafts import Draft
+from news_fastapi.domain.common import Image
+from news_fastapi.domain.draft import Draft
 from news_fastapi.utils.exceptions import NotFoundError
 from tests.adapters.persistence.tortoise.fixtures import tortoise_orm_lifespan
 from tests.fixtures import HEADLINES, PREDICTABLE_IDS_A, PREDICTABLE_IDS_B, TEXTS
@@ -24,6 +25,11 @@ class TortoiseDraftFactoryTests(TestCase):
         headline = "The Headline"
         date_published = DateTime.fromisoformat("2023-01-01T12:00:00+0000")
         author_id = "33333333-3333-3333-3333-333333333333"
+        image = Image(
+            url="https://example.com/images/1234",
+            description="The description of the image",
+            author="Emma Brown",
+        )
         text = "The text of the draft."
         user_id = "44444444-4444-4444-4444-444444444444"
         is_published = False
@@ -33,6 +39,7 @@ class TortoiseDraftFactoryTests(TestCase):
             headline=headline,
             date_published=date_published,
             author_id=author_id,
+            image=image,
             text=text,
             created_by_user_id=user_id,
             is_published=is_published,
@@ -42,6 +49,7 @@ class TortoiseDraftFactoryTests(TestCase):
         self.assertEqual(draft.headline, headline)
         self.assertEqual(draft.date_published, date_published)
         self.assertEqual(draft.author_id, author_id)
+        self.assertEqual(draft.image, image)
         self.assertEqual(draft.text, text)
         self.assertEqual(draft.created_by_user_id, user_id)
         self.assertEqual(draft.is_published, is_published)
@@ -55,7 +63,7 @@ class TortoiseDraftRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
         await self.enterAsyncContext(tortoise_orm_lifespan())
 
     def _create_valid_draft(self) -> TortoiseDraft:
-        return TortoiseDraft(
+        draft = TortoiseDraft(
             id="11111111-1111-1111-1111-111111111111",
             news_article_id="22222222-2222-2222-2222-222222222222",
             headline="The Headline",
@@ -65,6 +73,12 @@ class TortoiseDraftRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
             created_by_user_id="44444444-4444-4444-4444-444444444444",
             is_published=False,
         )
+        draft.image = Image(
+            url="https://example.com/images/1234",
+            description="The description of the image",
+            author="Emma Brown",
+        )
+        return draft
 
     async def _populate_drafts(
         self,
@@ -89,6 +103,11 @@ class TortoiseDraftRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
                 created_by_user_id=user_id,
                 is_published=False,
             )
+            draft.image = Image(
+                url="https://example.com/images/1234",
+                description="The description of the image",
+                author="Emma Brown",
+            )
             await draft.save()
 
     def assertDraftsAreCompletelyEqual(self, draft_1: Draft, draft_2: Draft) -> None:
@@ -97,6 +116,7 @@ class TortoiseDraftRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
         self.assertEqual(draft_1.headline, draft_2.headline)
         self.assertEqual(draft_1.date_published, draft_2.date_published)
         self.assertEqual(draft_1.author_id, draft_2.author_id)
+        self.assertEqual(draft_1.image, draft_2.image)
         self.assertEqual(draft_1.text, draft_2.text)
         self.assertEqual(draft_1.created_by_user_id, draft_2.created_by_user_id)
         self.assertEqual(draft_1.is_published, draft_2.is_published)
@@ -124,6 +144,11 @@ class TortoiseDraftRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
         draft.headline = "NEW Headline"
         draft.date_published = DateTime.fromisoformat("2023-03-11T15:00:00+0000")
         draft.author_id = "77777777-7777-7777-7777-777777777777"
+        draft.image = Image(
+            url="https://example.com/images/99999-NEW",
+            description="NEW description of the image",
+            author="NEW Author",
+        )
         draft.text = "NEW text."
         await self.repository.save(draft)
 

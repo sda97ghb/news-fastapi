@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
 from news_fastapi.core.news.auth import NewsAuth
-from news_fastapi.domain.authors import Author, AuthorRepository
-from news_fastapi.domain.news import (
+from news_fastapi.domain.author import Author, AuthorRepository
+from news_fastapi.domain.news_article import (
     NewsArticle,
     NewsArticleListFilter,
     NewsArticleRepository,

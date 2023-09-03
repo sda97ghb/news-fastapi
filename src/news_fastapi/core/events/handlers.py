@@ -2,7 +2,7 @@ from dependency_injector.wiring import Provide
 
 from news_fastapi.core.drafts.services import DraftsService
 from news_fastapi.core.events.registry import DomainEventHandlerRegistry
-from news_fastapi.domain.authors import AuthorDeleted
+from news_fastapi.domain.author import AuthorDeleted
 
 domain_event_handler_registry = DomainEventHandlerRegistry()
 

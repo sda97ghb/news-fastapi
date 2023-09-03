@@ -1,6 +1,7 @@
 from datetime import datetime as DateTime
 from unittest import TestCase
 
+from news_fastapi.domain.common import Image
 from tests.domain.fixtures import TestDraftFactory, TestNewsArticle
 
 
@@ -18,6 +19,7 @@ class DraftFactoryTests(TestCase):
         self.assertEqual(draft.headline, "")
         self.assertIsNone(draft.date_published)
         self.assertEqual(draft.author_id, author_id)
+        self.assertIsNone(draft.image)
         self.assertEqual(draft.text, "")
         self.assertEqual(draft.created_by_user_id, user_id)
         self.assertFalse(draft.is_published)
@@ -33,6 +35,11 @@ class DraftFactoryTests(TestCase):
             headline="The Headline",
             date_published=DateTime.fromisoformat("2023-01-01T12:00:00+0000"),
             author_id=author_id,
+            image=Image(
+                url="https://example.com/images/1234",
+                description="The description of the image",
+                author="Emma Brown",
+            ),
             text="The text of the article.",
             revoke_reason=None,
         )
@@ -46,6 +53,7 @@ class DraftFactoryTests(TestCase):
         self.assertEqual(draft.headline, news_article.headline)
         self.assertEqual(draft.date_published, news_article.date_published)
         self.assertEqual(draft.author_id, news_article.author_id)
+        self.assertEqual(draft.image, news_article.image)
         self.assertEqual(draft.text, news_article.text)
         self.assertEqual(draft.created_by_user_id, user_id)
         self.assertFalse(draft.is_published)
