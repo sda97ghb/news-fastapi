@@ -107,16 +107,8 @@ class DraftsService:
             news_article_id
         )
         draft_id = await self._draft_repository.next_identity()
-        draft = self._draft_factory.create_draft(
-            draft_id=draft_id,
-            news_article_id=news_article.id,
-            headline=news_article.headline,
-            date_published=news_article.date_published,
-            author_id=news_article.author_id,
-            image=news_article.image,
-            text=news_article.text,
-            created_by_user_id=current_user_id,
-            is_published=False,
+        draft = self._draft_factory.create_draft_from_news_article(
+            news_article=news_article, draft_id=draft_id, user_id=current_user_id
         )
         return draft
 

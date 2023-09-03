@@ -7,8 +7,8 @@ from news_fastapi.adapters.persistence.tortoise.drafts import (
     TortoiseDraftFactory,
     TortoiseDraftRepository,
 )
-from news_fastapi.domain.common import Image
 from news_fastapi.domain.draft import Draft
+from news_fastapi.domain.value_objects import Image
 from news_fastapi.utils.exceptions import NotFoundError
 from tests.adapters.persistence.tortoise.fixtures import tortoise_orm_lifespan
 from tests.fixtures import HEADLINES, PREDICTABLE_IDS_A, PREDICTABLE_IDS_B, TEXTS
@@ -33,7 +33,7 @@ class TortoiseDraftFactoryTests(TestCase):
         text = "The text of the draft."
         user_id = "44444444-4444-4444-4444-444444444444"
         is_published = False
-        draft = self.factory.create_draft(
+        draft = self.factory._create_draft(
             draft_id=draft_id,
             news_article_id=news_article_id,
             headline=headline,

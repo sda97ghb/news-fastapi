@@ -2,9 +2,8 @@ from dataclasses import replace
 from datetime import datetime as DateTime, timedelta as TimeDelta
 from unittest import IsolatedAsyncioTestCase, TestCase
 
-from news_fastapi.domain.common import Image
-from news_fastapi.domain.draft import Draft
-from news_fastapi.domain.news_article import NewsArticle
+from news_fastapi.domain.draft import Draft, DraftFactory
+from news_fastapi.domain.news_article import NewsArticle, NewsArticleFactory
 from news_fastapi.domain.publish import (
     DraftValidationProblem,
     DraftValidator,
@@ -19,13 +18,8 @@ from news_fastapi.domain.publish import (
     TooLongImageDescriptionProblem,
     pick_date_published,
 )
-from tests.domain.fixtures import (
-    TestDraft,
-    TestDraftFactory,
-    TestDraftRepository,
-    TestNewsArticleFactory,
-    TestNewsArticleRepository,
-)
+from news_fastapi.domain.value_objects import Image
+from tests.domain.fixtures import DraftRepositoryFixture, NewsArticleRepositoryFixture
 from tests.utils import AssertMixin
 
 
@@ -34,10 +28,11 @@ class DraftValidatorTests(AssertMixin, TestCase):
         self.max_headline_length = 100
         self.max_image_description_length = 200
 
-    def create_valid_draft(self) -> TestDraft:
-        return TestDraft(
-            id="11111111-1111-1111-1111-111111111111",
+    def create_valid_draft(self) -> Draft:
+        return Draft(
+            id_="11111111-1111-1111-1111-111111111111",
             news_article_id=None,
+            created_by_user_id="33333333-3333-3333-3333-333333333333",
             headline="The Headline",
             date_published=DateTime.fromisoformat("2023-01-01T12:00:00+0000"),
             author_id="22222222-2222-2222-2222-222222222222",
@@ -47,7 +42,6 @@ class DraftValidatorTests(AssertMixin, TestCase):
                 author="Emma Brown",
             ),
             text="The news article's text.",
-            created_by_user_id="33333333-3333-3333-3333-333333333333",
             is_published=False,
         )
 
@@ -158,10 +152,10 @@ class PickDatePublishedTests(TestCase):
 
 class PublishServiceTests(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
-        self.draft_factory = TestDraftFactory()
-        self.draft_repository = TestDraftRepository()
-        self.news_article_factory = TestNewsArticleFactory()
-        self.news_article_repository = TestNewsArticleRepository()
+        self.draft_factory = DraftFactory()
+        self.draft_repository = DraftRepositoryFixture()
+        self.news_article_factory = NewsArticleFactory()
+        self.news_article_repository = NewsArticleRepositoryFixture()
         self.publish_service = PublishService(
             draft_repository=self.draft_repository,
             news_article_factory=self.news_article_factory,
@@ -171,15 +165,15 @@ class PublishServiceTests(IsolatedAsyncioTestCase):
     async def test_publish_create_from_scratch(self) -> None:
         draft = await self._create_draft_from_scratch()
         published_news_article = await self.publish_service.publish_draft(draft.id)
-        self._assert_news_article_matches_draft(published_news_article, draft)
+        self.assertNewsArticleMatchesDraft(published_news_article, draft)
 
     async def test_publish_update_previously_published(self) -> None:
         news_article = await self._create_news_article()
         draft = await self._create_draft_from_news_article(news_article)
         published_news_article = await self.publish_service.publish_draft(draft.id)
-        self._assert_news_article_matches_draft(published_news_article, draft)
+        self.assertNewsArticleMatchesDraft(published_news_article, draft)
 
-    def _assert_news_article_matches_draft(
+    def assertNewsArticleMatchesDraft(
         self, news_article: NewsArticle, draft: Draft
     ) -> None:
         self.assertEqual(news_article.headline, draft.headline)

@@ -32,7 +32,7 @@ from news_fastapi.core.authors.services import (
 )
 from news_fastapi.core.events.handlers import domain_event_handler_registry
 from news_fastapi.core.news.services import NewsListService, NewsService
-from news_fastapi.domain.events import DomainEvent, DomainEventBuffer
+from news_fastapi.domain.seed_work.events import DomainEvent, DomainEventBuffer
 
 
 async def mock_event_stream() -> AsyncIterable[DomainEvent]:

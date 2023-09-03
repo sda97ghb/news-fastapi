@@ -7,13 +7,13 @@ from tortoise.exceptions import DoesNotExist
 from tortoise.fields import DatetimeField, TextField
 from tortoise.queryset import QuerySet
 
-from news_fastapi.domain.common import Image
 from news_fastapi.domain.news_article import (
     NewsArticle,
     NewsArticleFactory,
     NewsArticleListFilter,
     NewsArticleRepository,
 )
+from news_fastapi.domain.value_objects import Image
 from news_fastapi.utils.exceptions import NotFoundError
 
 

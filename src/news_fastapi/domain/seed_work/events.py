@@ -6,7 +6,7 @@ from typing import Any, Iterable
 from uuid import uuid4
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, frozen=True)
 class DomainEvent(ABC):
     event_id: str = dataclass_field(default_factory=lambda: str(uuid4()))
     date_occurred: DateTime = dataclass_field(default_factory=lambda: DateTime.now(UTC))

@@ -1,21 +1,34 @@
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping
 from dataclasses import dataclass
-from typing import Any, Protocol, runtime_checkable
+from typing import Any
 
-from news_fastapi.domain.events import DomainEvent
-
-
-@runtime_checkable
-class Author(Protocol):
-    id: str
-    name: str
+from news_fastapi.domain.seed_work.entity import Entity
+from news_fastapi.domain.seed_work.events import DomainEvent
 
 
-class AuthorFactory(ABC):
-    @abstractmethod
+class Author(Entity):
+    _name: str
+
+    def __init__(self, id_: str, name: str) -> None:
+        super().__init__(id_=id_)
+        self._name = name
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, new_name: str) -> None:
+        new_name = new_name.strip()
+        if new_name == "":
+            raise ValueError("Author name can not be empty")
+        self._name = new_name
+
+
+class AuthorFactory:
     def create_author(self, author_id: str, name: str) -> Author:
-        raise NotImplementedError
+        return Author(id_=author_id, name=name)
 
 
 class AuthorRepository(ABC):
@@ -56,7 +69,7 @@ class DefaultAuthorRepository(ABC):
         raise NotImplementedError
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, frozen=True)
 class AuthorDeleted(DomainEvent):
     author_id: str
 

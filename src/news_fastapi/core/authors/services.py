@@ -8,8 +8,8 @@ from news_fastapi.domain.author import (
     AuthorRepository,
     DefaultAuthorRepository,
 )
-from news_fastapi.domain.events import DomainEventBuffer
 from news_fastapi.domain.news_article import NewsArticleRepository
+from news_fastapi.domain.seed_work.events import DomainEventBuffer
 from news_fastapi.utils.sentinels import Undefined, UndefinedType
 
 

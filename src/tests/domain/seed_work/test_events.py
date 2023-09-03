@@ -3,14 +3,14 @@ from datetime import datetime as DateTime
 from typing import Any
 from unittest import TestCase
 
-from news_fastapi.domain.events import (
+from news_fastapi.domain.seed_work.events import (
     CompleteDomainEventBufferError,
     DomainEvent,
     DomainEventBuffer,
 )
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, frozen=True)
 class TestDomainEvent(DomainEvent):
     answer: int
 

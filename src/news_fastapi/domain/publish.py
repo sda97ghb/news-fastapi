@@ -205,7 +205,7 @@ class PublishService:
         draft = await self._draft_repository.get_draft_by_id(draft_id)
         if draft.is_published:
             raise DraftAlreadyPublishedError("The draft is already published")
-        draft.is_published = True
+        draft.mark_as_published()
         await self._draft_repository.save(draft)
         return draft
 
@@ -235,7 +235,8 @@ class PublishService:
             news_article_id
         )
         self._fill_news_article_from_draft(news_article, draft)
-        news_article.revoke_reason = None
+        if news_article.is_revoked:
+            news_article.cancel_revoke()
         return news_article
 
     def _fill_news_article_from_draft(

@@ -1,7 +1,7 @@
 from collections import defaultdict
 from collections.abc import Awaitable, Callable, Collection
 
-from news_fastapi.domain.events import DomainEvent
+from news_fastapi.domain.seed_work.events import DomainEvent
 
 DomainEventHandler = Callable[[DomainEvent], Awaitable[None]]
 

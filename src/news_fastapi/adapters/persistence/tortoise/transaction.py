@@ -5,7 +5,7 @@ from tortoise.transactions import in_transaction
 
 from news_fastapi.core.events.registry import DomainEventHandlerRegistry
 from news_fastapi.core.transaction import TransactionContextManager, TransactionManager
-from news_fastapi.domain.events import DomainEventBuffer
+from news_fastapi.domain.seed_work.events import DomainEventBuffer
 
 
 class TortoiseTransactionManager(TransactionManager):

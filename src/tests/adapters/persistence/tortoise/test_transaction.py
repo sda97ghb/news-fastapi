@@ -4,9 +4,9 @@ from news_fastapi.adapters.persistence.tortoise.transaction import (
     TortoiseTransactionManager,
 )
 from news_fastapi.core.events.registry import DomainEventHandlerRegistry
-from news_fastapi.domain.events import DomainEvent, DomainEventBuffer
+from news_fastapi.domain.seed_work.events import DomainEvent, DomainEventBuffer
 from tests.adapters.persistence.tortoise.fixtures import tortoise_orm_lifespan
-from tests.domain.test_events import TestDomainEvent
+from tests.domain.seed_work.test_events import TestDomainEvent
 
 
 class TestEventHandler:

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-from news_fastapi.domain.events import DomainEvent
+from news_fastapi.domain.seed_work.events import DomainEvent
 
 
 @dataclass

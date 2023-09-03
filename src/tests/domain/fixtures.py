@@ -1,66 +1,18 @@
 from collections.abc import Iterable
-from dataclasses import dataclass
-from datetime import datetime as DateTime
 from typing import Collection, Mapping
 from uuid import uuid4
 
-from news_fastapi.domain.author import (
-    Author,
-    AuthorFactory,
-    AuthorRepository,
-    DefaultAuthorRepository,
-)
-from news_fastapi.domain.common import Image
-from news_fastapi.domain.draft import Draft, DraftFactory, DraftRepository
+from news_fastapi.domain.author import Author, AuthorRepository, DefaultAuthorRepository
+from news_fastapi.domain.draft import Draft, DraftRepository
 from news_fastapi.domain.news_article import (
     NewsArticle,
-    NewsArticleFactory,
     NewsArticleListFilter,
     NewsArticleRepository,
 )
 from news_fastapi.utils.exceptions import NotFoundError
 
 
-@dataclass
-class TestDraft:
-    id: str
-    news_article_id: str | None
-    headline: str
-    date_published: DateTime | None
-    author_id: str
-    image: Image | None
-    text: str
-    created_by_user_id: str
-    is_published: bool
-
-
-class TestDraftFactory(DraftFactory):
-    def create_draft(
-        self,
-        draft_id: str,
-        news_article_id: str | None,
-        headline: str,
-        date_published: DateTime | None,
-        author_id: str,
-        image: Image | None,
-        text: str,
-        created_by_user_id: str,
-        is_published: bool,
-    ) -> Draft:
-        return TestDraft(
-            id=draft_id,
-            news_article_id=news_article_id,
-            headline=headline,
-            date_published=date_published,
-            author_id=author_id,
-            image=image,
-            text=text,
-            created_by_user_id=created_by_user_id,
-            is_published=is_published,
-        )
-
-
-class TestDraftRepository(DraftRepository):
+class DraftRepositoryFixture(DraftRepository):
     _data: dict[str, Draft]
 
     def __init__(self, initial_drafts: Iterable[Draft] = ()) -> None:
@@ -101,40 +53,7 @@ class TestDraftRepository(DraftRepository):
             pass
 
 
-@dataclass
-class TestNewsArticle:
-    id: str
-    headline: str
-    date_published: DateTime
-    author_id: str
-    image: Image
-    text: str
-    revoke_reason: str | None
-
-
-class TestNewsArticleFactory(NewsArticleFactory):
-    def create_news_article(
-        self,
-        news_article_id: str,
-        headline: str,
-        date_published: DateTime,
-        author_id: str,
-        image: Image,
-        text: str,
-        revoke_reason: str | None,
-    ) -> NewsArticle:
-        return TestNewsArticle(
-            id=news_article_id,
-            headline=headline,
-            date_published=date_published,
-            author_id=author_id,
-            image=image,
-            text=text,
-            revoke_reason=revoke_reason,
-        )
-
-
-class TestNewsArticleRepository(NewsArticleRepository):
+class NewsArticleRepositoryFixture(NewsArticleRepository):
     _data: dict[str, NewsArticle]
 
     def __init__(self) -> None:
@@ -183,18 +102,7 @@ class TestNewsArticleRepository(NewsArticleRepository):
         return counter
 
 
-@dataclass
-class TestAuthor:
-    id: str
-    name: str
-
-
-class TestAuthorFactory(AuthorFactory):
-    def create_author(self, author_id: str, name: str) -> Author:
-        return TestAuthor(id=author_id, name=name)
-
-
-class TestDefaultAuthorRepository(DefaultAuthorRepository):
+class DefaultAuthorRepositoryFixture(DefaultAuthorRepository):
     _data: dict[str, str | None]
 
     def __init__(self) -> None:
@@ -207,7 +115,7 @@ class TestDefaultAuthorRepository(DefaultAuthorRepository):
         self._data[user_id] = author_id
 
 
-class TestAuthorRepository(AuthorRepository):
+class AuthorRepositoryFixture(AuthorRepository):
     _data: dict[str, Author]
 
     def __init__(self) -> None:

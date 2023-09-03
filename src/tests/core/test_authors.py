@@ -10,7 +10,7 @@ from news_fastapi.core.authors.services import (
 )
 from news_fastapi.core.exceptions import AuthorizationError
 from news_fastapi.domain.author import AuthorDeleted
-from news_fastapi.domain.events import DomainEvent, DomainEventBuffer
+from news_fastapi.domain.seed_work.events import DomainEvent, DomainEventBuffer
 from news_fastapi.utils.exceptions import NotFoundError
 from tests.core.fixtures import TestAuthorsAuth, TestCoreTransactionManager
 from tests.domain.fixtures import (

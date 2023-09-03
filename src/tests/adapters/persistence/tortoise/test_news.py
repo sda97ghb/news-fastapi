@@ -7,8 +7,8 @@ from news_fastapi.adapters.persistence.tortoise.news import (
     TortoiseNewsArticleFactory,
     TortoiseNewsArticleRepository,
 )
-from news_fastapi.domain.common import Image
 from news_fastapi.domain.news_article import NewsArticle, NewsArticleListFilter
+from news_fastapi.domain.value_objects import Image
 from news_fastapi.utils.exceptions import NotFoundError
 from tests.adapters.persistence.tortoise.fixtures import tortoise_orm_lifespan
 from tests.fixtures import HEADLINES, PREDICTABLE_IDS_A, TEXTS

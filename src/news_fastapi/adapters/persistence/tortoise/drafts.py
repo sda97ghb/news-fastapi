@@ -6,8 +6,8 @@ from tortoise import Model
 from tortoise.exceptions import DoesNotExist
 from tortoise.fields import BooleanField, DatetimeField, TextField
 
-from news_fastapi.domain.common import Image
 from news_fastapi.domain.draft import Draft, DraftFactory, DraftRepository
+from news_fastapi.domain.value_objects import Image
 from news_fastapi.utils.exceptions import NotFoundError
 
 
@@ -56,7 +56,7 @@ class TortoiseDraft(Model):
 
 
 class TortoiseDraftFactory(DraftFactory):
-    def create_draft(
+    def _create_draft(
         self,
         draft_id: str,
         news_article_id: str | None,

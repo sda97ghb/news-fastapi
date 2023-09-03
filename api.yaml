@@ -54,6 +54,10 @@ paths:
                 author:
                   id: "6d521306-ba9d-4503-ba9f-1ef9c800db3c"
                   name: "John Doe"
+                image:
+                  url: "https://example.com/images/1234"
+                  description: "The description of the image"
+                  author: "Emma Brown"
                 text: "Full text of the news article"
         404:
           description: "News article not found"
@@ -202,6 +206,10 @@ paths:
                 author:
                   id: "84a6a8f1-cd1d-44fd-8279-b4f574236743"
                   name: "John Doe"
+                image:
+                  url: "https://example.com/images/1234"
+                  description: "The description of the image"
+                  author: "Emma Brown"
                 text: "Full text of the news article"
         403:
           description: "User can't manage drafts"
@@ -226,17 +234,36 @@ paths:
                   nullable: true
                 authorId:
                   type: string
+                image:
+                  type: object
+                  nullable: true
+                  properties:
+                    url:
+                      type: string
+                    description:
+                      type: string
+                    author:
+                      type: string
+                  required:
+                    - url
+                    - description
+                    - author
                 text:
                   type: string
               required:
                 - headline
                 - datePublished
                 - authorId
+                - image
                 - text
             example:
               headline: "The Ultimate Cat Dresses Checklist"
               datePublished: "2022-01-01T15:00:00+0000"
               authorId: "e2dac36e-4e61-4266-b888-b69741c10584"
+              image:
+                url: "https://example.com/images/1234"
+                description: "The description of the image"
+                author: "Emma Brown"
               text: "Full text of the news article"
       responses:
         204:
@@ -531,6 +558,20 @@ components:
               type: string
             name:
               type: string
+        image:
+          type: object
+          nullable: true
+          properties:
+            url:
+              type: string
+            description:
+              type: string
+            author:
+              type: string
+          required:
+            - url
+            - description
+            - author
         text:
           type: string
         createdByUserId:
@@ -543,6 +584,7 @@ components:
         - headline
         - datePublished
         - author
+        - image
         - text
         - createdByUserId
         - isPublished
@@ -577,6 +619,19 @@ components:
           type: string
         author:
           $ref: "#/components/schemas/Author"
+        image:
+          type: object
+          properties:
+            url:
+              type: string
+            description:
+              type: string
+            author:
+              type: string
+          required:
+            - url
+            - description
+            - author
         text:
           type: string
         revoke_reason:
@@ -587,6 +642,7 @@ components:
         - headline
         - datePublished
         - author
+        - image
         - text
         - revoke_reason
     NewsArticlesListItem:
