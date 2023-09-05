@@ -1,32 +1,91 @@
 from collections.abc import Iterable
-from datetime import datetime as DateTime
 from typing import Collection
 from uuid import uuid4
 
-from tortoise import Model
 from tortoise.exceptions import DoesNotExist
-from tortoise.fields import BooleanField, DatetimeField, TextField
 
+from news_fastapi.adapters.persistence.tortoise.models import AuthorModel, DraftModel
+from news_fastapi.core.drafts.queries import (
+    DraftDetails,
+    DraftDetailsAuthor,
+    DraftDetailsQueries,
+    DraftsListItem,
+    DraftsListPage,
+    DraftsListQueries,
+)
 from news_fastapi.domain.draft import Draft, DraftRepository
 from news_fastapi.domain.value_objects import Image
 from news_fastapi.utils.exceptions import NotFoundError
 
 
-class DraftModel(Model):
-    id: str = TextField(pk=True)
-    news_article_id: str | None = TextField(null=True)
-    headline: str = TextField()
-    date_published: DateTime | None = DatetimeField(null=True)
-    author_id: str = TextField()
-    image_url: str | None = TextField(null=True)
-    image_description: str | None = TextField(null=True)
-    image_author: str | None = TextField(null=True)
-    text: str = TextField()
-    created_by_user_id: str = TextField()
-    is_published: bool = BooleanField()  # type: ignore[assignment]
+class TortoiseDraftsListQueries(DraftsListQueries):
+    async def get_page(self, offset: int, limit: int) -> DraftsListPage:
+        if offset < 0:
+            raise ValueError("Offset must be non-negative integer")
+        model_instances_list = await DraftModel.all().offset(offset).limit(limit)
+        return DraftsListPage(
+            offset=offset,
+            limit=limit,
+            items=[
+                DraftsListItem(
+                    draft_id=model_instance.id,
+                    news_article_id=model_instance.news_article_id,
+                    headline=model_instance.headline,
+                    created_by_user_id=model_instance.created_by_user_id,
+                    is_published=model_instance.is_published,
+                )
+                for model_instance in model_instances_list
+            ],
+        )
 
-    class Meta:
-        table = "drafts"
+
+class TortoiseDraftDetailsQueries(DraftDetailsQueries):
+    async def get_draft(self, draft_id: str) -> DraftDetails:
+        draft_model_instance = await self._fetch_draft(draft_id)
+        author_model_instance = await self._fetch_author(
+            draft_id, draft_model_instance.author_id
+        )
+        image = self._image(draft_model_instance)
+        return DraftDetails(
+            draft_id=draft_model_instance.id,
+            news_article_id=draft_model_instance.news_article_id,
+            created_by_user_id=draft_model_instance.created_by_user_id,
+            headline=draft_model_instance.headline,
+            date_published=draft_model_instance.date_published,
+            author=DraftDetailsAuthor(
+                author_id=author_model_instance.id, name=author_model_instance.name
+            ),
+            image=image,
+            text=draft_model_instance.text,
+            is_published=draft_model_instance.is_published,
+        )
+
+    async def _fetch_draft(self, draft_id: str) -> DraftModel:
+        try:
+            return await DraftModel.get(id=draft_id)
+        except DoesNotExist as err:
+            raise NotFoundError("Draft not found") from err
+
+    async def _fetch_author(self, draft_id: str, author_id: str) -> AuthorModel:
+        try:
+            return await AuthorModel.get(id=author_id)
+        except DoesNotExist as err:
+            raise NotFoundError(
+                f"Draft '{draft_id}' contains non-existent author ID '{author_id}'"
+            ) from err
+
+    def _image(self, draft_model_instance: DraftModel) -> Image | None:
+        if (
+            draft_model_instance.image_url is not None
+            and draft_model_instance.image_description is not None
+            and draft_model_instance.image_author is not None
+        ):
+            return Image(
+                url=draft_model_instance.image_url,
+                description=draft_model_instance.image_description,
+                author=draft_model_instance.image_author,
+            )
+        return None
 
 
 class TortoiseDraftRepository(DraftRepository):

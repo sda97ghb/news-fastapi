@@ -14,7 +14,11 @@ from news_fastapi.adapters.rest_api.parameters import (
     NewsArticleIdInPath,
     OffsetInQuery,
 )
-from news_fastapi.core.news.services import NewsListService, NewsService
+from news_fastapi.core.news.commands import RevokeNewsArticleService
+from news_fastapi.core.news.queries import (
+    NewsArticleDetailsService,
+    NewsArticlesListService,
+)
 
 router = APIRouter()
 
@@ -32,25 +36,27 @@ DEFAULT_NEWS_LIST_LIMIT = 10
 async def get_news_list(
     limit: LimitInQuery = None,
     offset: OffsetInQuery = None,
-    news_list_service: NewsListService = Depends(Provide["news_list_service"]),
+    news_articles_list_service: NewsArticlesListService = Depends(
+        Provide["news_articles_list_service"]
+    ),
 ) -> list[NewsArticlesListItem]:
     if limit is None:
         limit = DEFAULT_NEWS_LIST_LIMIT
     if offset is None:
         offset = 0
-    news_list = await news_list_service.get_page(offset=offset, limit=limit)
+    page = await news_articles_list_service.get_page(offset=offset, limit=limit)
     return [
         NewsArticlesListItem(
-            id=news_list_item.news_article.id,
-            headline=news_list_item.news_article.headline,
-            date_published=news_list_item.news_article.date_published.isoformat(),
+            id=item.news_article_id,
+            headline=item.headline,
+            date_published=item.date_published.isoformat(),
             author=Author(
-                id=news_list_item.author.id,
-                name=news_list_item.author.name,
+                id=item.author.author_id,
+                name=item.author.name,
             ),
-            revoke_reason=news_list_item.news_article.revoke_reason,
+            revoke_reason=item.revoke_reason,
         )
-        for news_list_item in news_list
+        for item in page.items
     ]
 
 
@@ -63,19 +69,23 @@ async def get_news_list(
 @inject
 async def get_news_article(
     news_article_id: NewsArticleIdInPath,
-    news_service: NewsService = Depends(Provide["news_service"]),
+    news_article_details_service: NewsArticleDetailsService = Depends(
+        Provide["news_article_details_service"]
+    ),
 ) -> NewsArticle:
-    news_article = await news_service.get_news_article(news_article_id=news_article_id)
+    details = await news_article_details_service.get_news_article(
+        news_article_id=news_article_id
+    )
     return NewsArticle(
-        id=news_article.news_article.id,
-        headline=news_article.news_article.headline,
-        date_published=news_article.news_article.date_published.isoformat(),
+        id=details.news_article_id,
+        headline=details.headline,
+        date_published=details.date_published.isoformat(),
         author=Author(
-            id=news_article.author.id,
-            name=news_article.author.name,
+            id=details.author.author_id,
+            name=details.author.name,
         ),
-        text=news_article.news_article.text,
-        revoke_reason=news_article.news_article.revoke_reason,
+        text=details.text,
+        revoke_reason=details.revoke_reason,
     )
 
 
@@ -96,8 +106,10 @@ async def revoke_news_article(
             examples=["Fake"],
         ),
     ],
-    news_service: NewsService = Depends(Provide["news_service"]),
+    revoke_news_article_service: RevokeNewsArticleService = Depends(
+        Provide["revoke_news_article_service"]
+    ),
 ) -> None:
-    await news_service.revoke_news_article(
+    await revoke_news_article_service.revoke_news_article(
         news_article_id=news_article_id, reason=reason
     )

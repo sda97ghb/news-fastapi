@@ -2,10 +2,13 @@ from unittest import IsolatedAsyncioTestCase, TestCase
 from uuid import UUID, uuid4
 
 from news_fastapi.adapters.persistence.tortoise.author import (
-    AuthorModel,
-    DefaultAuthor,
     TortoiseAuthorRepository,
-    TortoiseDefaultAuthorRepository,
+    TortoiseDefaultAuthorRepository, TortoiseAuthorsListQueries,
+    TortoiseAuthorDetailsQueries,
+)
+from news_fastapi.adapters.persistence.tortoise.models import (
+    AuthorModel,
+    DefaultAuthorModel,
 )
 from news_fastapi.domain.author import Author
 from news_fastapi.utils.exceptions import NotFoundError
@@ -14,20 +17,11 @@ from tests.fixtures import HUMAN_NAMES
 from tests.utils import AssertMixin
 
 
-class TortoiseAuthorRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
-    def setUp(self) -> None:
-        self.repository = TortoiseAuthorRepository()
-
-    async def asyncSetUp(self) -> None:
-        await self.enterAsyncContext(tortoise_orm_lifespan())
-
+class AuthorTestsMixin:
     def _create_valid_author_model_instance(self) -> AuthorModel:
         author_id = "11111111-1111-1111-1111-111111111111"
         name = "John Doe"
         return AuthorModel(id=author_id, name=name)
-
-    def _create_author(self) -> Author:
-        return Author(id_="11111111-1111-1111-1111-111111111111", name="John Doe")
 
     async def _populate_author(self) -> AuthorModel:
         model_instance = self._create_valid_author_model_instance()
@@ -38,6 +32,64 @@ class TortoiseAuthorRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
         self.assertGreater(len(HUMAN_NAMES), 50)
         for name in HUMAN_NAMES:
             await AuthorModel.create(id=str(uuid4()), name=name)
+
+
+class TortoiseAuthorsListQueriesTests(AuthorTestsMixin, AssertMixin, IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        self.queries = TortoiseAuthorsListQueries()
+
+    async def asyncSetUp(self) -> None:
+        await self.enterAsyncContext(tortoise_orm_lifespan())
+
+    async def test_get_page(self) -> None:
+        await self._populate_authors()
+        offset = 0
+        limit = 50
+        page = await self.queries.get_page(offset=offset, limit=limit)
+        self.assertEqual(page.offset, offset)
+        self.assertEqual(page.limit, limit)
+        self.assertEqual(len(page.items), limit)
+
+    async def test_get_page_too_big_offset_returns_empty_list(self) -> None:
+        await self._populate_authors()
+        page = await self.queries.get_page(offset=10000, limit=50)
+        self.assertEmpty(page.items)
+
+    async def test_get_page_negative_offset_raises_values_error(self) -> None:
+        await self._populate_authors()
+        with self.assertRaises(ValueError):
+            await self.queries.get_page(offset=-1, limit=50)
+
+
+class TortoiseAuthorDetailsQueriesTests(AuthorTestsMixin, IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        self.queries = TortoiseAuthorDetailsQueries()
+
+    async def asyncSetUp(self) -> None:
+        await self.enterAsyncContext(tortoise_orm_lifespan())
+
+    async def test_get_author(self) -> None:
+        saved_author_model_instance = await self._populate_author()
+        author_id = saved_author_model_instance.id
+        details = await self.queries.get_author(author_id=author_id)
+        self.assertEqual(details.author_id, saved_author_model_instance.id)
+        self.assertEqual(details.name, saved_author_model_instance.name)
+
+    async def test_get_author_raises_not_found(self) -> None:
+        non_existent_author_id = str(uuid4())
+        with self.assertRaises(NotFoundError):
+            await self.queries.get_author(author_id=non_existent_author_id)
+
+
+class TortoiseAuthorRepositoryTests(AuthorTestsMixin, AssertMixin, IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        self.repository = TortoiseAuthorRepository()
+
+    async def asyncSetUp(self) -> None:
+        await self.enterAsyncContext(tortoise_orm_lifespan())
+
+    def _create_author(self) -> Author:
+        return Author(id_="11111111-1111-1111-1111-111111111111", name="John Doe")
 
     def assertAuthorAndModelAreCompletelyEqual(
         self, author: Author, model_instance: AuthorModel
@@ -157,7 +209,7 @@ class TortoiseDefaultAuthorRepositoryTests(IsolatedAsyncioTestCase):
     async def test_get_default_author_id(self) -> None:
         user_id = str(uuid4())
         expected_author_id = str(uuid4())
-        await DefaultAuthor.create(user_id=user_id, author_id=expected_author_id)
+        await DefaultAuthorModel.create(user_id=user_id, author_id=expected_author_id)
 
         returned_author_id = await self.repository.get_default_author_id(
             user_id=user_id
@@ -178,9 +230,9 @@ class TortoiseDefaultAuthorRepositoryTests(IsolatedAsyncioTestCase):
         await self.repository.set_default_author_id(
             user_id=user_id, author_id=author_id
         )
-        self.assertIsNotNone(await DefaultAuthor.get_or_none(user_id=user_id))
+        self.assertIsNotNone(await DefaultAuthorModel.get_or_none(user_id=user_id))
 
     async def test_set_default_author_to_null(self) -> None:
         user_id = str(uuid4())
         await self.repository.set_default_author_id(user_id=user_id, author_id=None)
-        self.assertIsNone(await DefaultAuthor.get_or_none(user_id=user_id))
+        self.assertIsNone(await DefaultAuthorModel.get_or_none(user_id=user_id))

@@ -10,6 +10,9 @@ class SuperuserDraftsAuth(DraftsAuth):
     def can_get_draft(self, draft_id: str) -> bool:
         return True
 
+    def can_get_drafts_list(self) -> bool:
+        return True
+
     def can_update_draft(self, draft_id: str) -> bool:
         return True
 
@@ -31,6 +34,9 @@ class JWTDraftsAuth(DraftsAuth, BaseJWTAuth):
         return "drafts:manage" in self.permissions
 
     def can_get_draft(self, draft_id: str) -> bool:
+        return "drafts:manage" in self.permissions
+
+    def can_get_drafts_list(self) -> bool:
         return "drafts:manage" in self.permissions
 
     def can_update_draft(self, draft_id: str) -> bool:

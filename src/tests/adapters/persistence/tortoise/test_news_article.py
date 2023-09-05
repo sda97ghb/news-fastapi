@@ -2,9 +2,11 @@ from datetime import datetime as DateTime
 from unittest import IsolatedAsyncioTestCase, TestCase
 from uuid import UUID, uuid4
 
+from news_fastapi.adapters.persistence.tortoise.models import NewsArticleModel, \
+    AuthorModel
 from news_fastapi.adapters.persistence.tortoise.news_article import (
-    NewsArticleModel,
-    TortoiseNewsArticleRepository,
+    TortoiseNewsArticleRepository, TortoiseNewsArticlesListQueries,
+    TortoiseNewsArticleDetailsQueries,
 )
 from news_fastapi.domain.news_article import NewsArticle, NewsArticleListFilter
 from news_fastapi.domain.value_objects import Image
@@ -14,41 +16,19 @@ from tests.fixtures import HEADLINES, PREDICTABLE_IDS_A, TEXTS
 from tests.utils import AssertMixin
 
 
-class TortoiseNewsArticleRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
-    def setUp(self) -> None:
-        self.repository = TortoiseNewsArticleRepository()
-
-    async def asyncSetUp(self) -> None:
-        await self.enterAsyncContext(tortoise_orm_lifespan())
-
+class NewsArticleTestsMixin:
     def _create_valid_news_article_model_instance(
-        self, news_article_id: str = "11111111-1111-1111-1111-111111111111"
+        self, news_article_id: str = "11111111-1111-1111-1111-111111111111",
+            author_id: str = "22222222-2222-2222-2222-222222222222",
     ) -> NewsArticleModel:
         return NewsArticleModel(
             id=news_article_id,
             headline="The Headline",
             date_published=DateTime.fromisoformat("2023-01-01T12:00:00+0000"),
-            author_id="22222222-2222-2222-2222-222222222222",
+            author_id=author_id,
             image_url="https://example.com/images/1234",
             image_description="The description of the image",
             image_author="Emma Brown",
-            text="The text of the news article.",
-            revoke_reason=None,
-        )
-
-    def _create_news_article(
-        self, news_article_id: str = "11111111-1111-1111-1111-111111111111"
-    ) -> NewsArticle:
-        return NewsArticle(
-            id_=news_article_id,
-            headline="The Headline",
-            date_published=DateTime.fromisoformat("2023-01-01T12:00:00+0000"),
-            author_id="22222222-2222-2222-2222-222222222222",
-            image=Image(
-                url="https://example.com/images/1234",
-                description="The description of the image",
-                author="Emma Brown",
-            ),
             text="The text of the news article.",
             revoke_reason=None,
         )
@@ -81,21 +61,169 @@ class TortoiseNewsArticleRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
             )
             await news_article.save()
 
-    async def _populate_good_news_article(self) -> NewsArticleModel:
+    async def _populate_good_news_article(self, author_id: str | None = None) -> NewsArticleModel:
         published_model_instance = self._create_valid_news_article_model_instance(
-            news_article_id=str(uuid4())
+            news_article_id=str(uuid4()),
+            author_id=author_id if author_id else str(uuid4())
         )
         published_model_instance.revoke_reason = None
         await published_model_instance.save()
         return published_model_instance
 
-    async def _populate_revoked_news_article(self) -> NewsArticleModel:
+    async def _populate_revoked_news_article(self, author_id: str | None = None) -> NewsArticleModel:
         revoked_model_instance = self._create_valid_news_article_model_instance(
-            news_article_id=str(uuid4())
+            news_article_id=str(uuid4()),
+            author_id=author_id if author_id else str(uuid4())
         )
         revoked_model_instance.revoke_reason = "Fake"
         await revoked_model_instance.save()
         return revoked_model_instance
+
+    async def _populate_author(self, author_id: str | None = None) -> AuthorModel:
+        if author_id is None:
+            author_id = str(uuid4())
+        author_model_instance = AuthorModel(id=author_id, name="Lauren Brown")
+        await author_model_instance.save()
+        return author_model_instance
+
+
+class TortoiseNewsArticlesListQueriesTests(NewsArticleTestsMixin, AssertMixin, IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        self.queries = TortoiseNewsArticlesListQueries()
+
+    async def asyncSetUp(self) -> None:
+        await self.enterAsyncContext(tortoise_orm_lifespan())
+
+    async def test_get_page(self) -> None:
+        author_model_instance = await self._populate_author()
+        await self._populate_news_articles(author_id=author_model_instance.id)
+        offset = 0
+        limit = 10
+        page = await self.queries.get_page(offset=offset, limit=limit)
+        self.assertEqual(page.offset, offset)
+        self.assertEqual(page.limit, limit)
+        self.assertEqual(len(page.items), limit)
+
+    async def test_get_page_too_big_offset_returns_empty_list(
+        self,
+    ) -> None:
+        author_model_instance = await self._populate_author()
+        await self._populate_news_articles(author_id=author_model_instance.id)
+        page = await self.queries.get_page(offset=10000, limit=10)
+        self.assertEmpty(page.items)
+
+    async def test_get_page_negative_offset_raises_value_error(
+        self,
+    ) -> None:
+        author_model_instance = await self._populate_author()
+        await self._populate_news_articles(author_id=author_model_instance.id)
+        with self.assertRaises(ValueError):
+            await self.queries.get_page(offset=-1, limit=10)
+
+    async def test_get_page_filter_no_revoked(self) -> None:
+        author_model_instance = await self._populate_author()
+        all_authors = await AuthorModel.all()
+        authors_in_bulk = await AuthorModel.in_bulk(
+            id_list=[author_model_instance.id], field_name="id"
+        )
+        good_news_article_model_instance = await self._populate_good_news_article(
+            author_id=author_model_instance.id
+        )
+        revoked_news_article_model_instance = (
+            await self._populate_revoked_news_article(
+                author_id=author_model_instance.id
+            )
+        )
+
+        filter_ = NewsArticleListFilter(revoked="no_revoked")
+        page = await self.queries.get_page(offset=0, limit=10, filter_=filter_)
+
+        self.assertCountEqual(
+            (item.news_article_id
+            for item in page.items),
+            [good_news_article_model_instance.id]
+        )
+
+    async def test_get_page_filter_only_revoked(self) -> None:
+        author_model_instance = await self._populate_author()
+        good_news_article_model_instance = await self._populate_good_news_article(
+            author_id=author_model_instance.id
+        )
+        revoked_news_article_model_instance = (
+            await self._populate_revoked_news_article(
+                author_id=author_model_instance.id
+            )
+        )
+
+        filter_ = NewsArticleListFilter(revoked="only_revoked")
+        page = await self.queries.get_page(offset=0, limit=10, filter_=filter_)
+
+        self.assertCountEqual(
+            (item.news_article_id
+             for item in page.items),
+            [revoked_news_article_model_instance.id]
+        )
+
+
+class TortoiseNewsArticleDetailsQueriesTests(NewsArticleTestsMixin, IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        self.queries = TortoiseNewsArticleDetailsQueries()
+
+    async def asyncSetUp(self) -> None:
+        await self.enterAsyncContext(tortoise_orm_lifespan())
+
+    async def test_get_news_article(self) -> None:
+        saved_model_instance = await self._populate_news_article()
+        saved_author_model_instance = await self._populate_author(
+            author_id=saved_model_instance.author_id
+        )
+
+        news_article_id = saved_model_instance.id
+        details = await self.queries.get_news_article(news_article_id=news_article_id)
+
+        self.assertEqual(details.news_article_id, saved_model_instance.id)
+        self.assertEqual(details.headline, saved_model_instance.headline)
+        self.assertEqual(details.date_published, saved_model_instance.date_published)
+        self.assertEqual(details.author.author_id, saved_author_model_instance.id)
+        self.assertEqual(details.author.name, saved_author_model_instance.name)
+        self.assertEqual(details.image.url, saved_model_instance.image_url)
+        self.assertEqual(details.image.description,
+                         saved_model_instance.image_description)
+        self.assertEqual(details.image.author, saved_model_instance.image_author)
+        self.assertEqual(details.text, saved_model_instance.text)
+        self.assertEqual(details.revoke_reason, saved_model_instance.revoke_reason)
+
+    async def test_get_news_article_by_id_raises_not_found(self) -> None:
+        non_existent_news_article_id = str(uuid4())
+        with self.assertRaises(NotFoundError):
+            await self.queries.get_news_article(
+                news_article_id=non_existent_news_article_id
+            )
+
+
+class TortoiseNewsArticleRepositoryTests(NewsArticleTestsMixin, AssertMixin, IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        self.repository = TortoiseNewsArticleRepository()
+
+    async def asyncSetUp(self) -> None:
+        await self.enterAsyncContext(tortoise_orm_lifespan())
+
+    def _create_news_article(
+        self, news_article_id: str = "11111111-1111-1111-1111-111111111111"
+    ) -> NewsArticle:
+        return NewsArticle(
+            id_=news_article_id,
+            headline="The Headline",
+            date_published=DateTime.fromisoformat("2023-01-01T12:00:00+0000"),
+            author_id="22222222-2222-2222-2222-222222222222",
+            image=Image(
+                url="https://example.com/images/1234",
+                description="The description of the image",
+                author="Emma Brown",
+            ),
+            text="The text of the news article.",
+            revoke_reason=None,
+        )
 
     def assertNewsArticlesAreCompletelyEqual(
         self, news_article_1: NewsArticle, news_article_2: NewsArticle

@@ -13,12 +13,14 @@ from news_fastapi.adapters.rest_api.parameters import (
     OffsetInQuery,
 )
 from news_fastapi.core.authors.auth import AuthorsAuth
-from news_fastapi.core.authors.exceptions import DeleteAuthorError
-from news_fastapi.core.authors.services import (
-    AuthorsListService,
-    AuthorsService,
-    DefaultAuthorsService,
+from news_fastapi.core.authors.commands import (
+    CreateAuthorService,
+    DeleteAuthorService,
+    UpdateAuthorService,
 )
+from news_fastapi.core.authors.default_author import DefaultAuthorService
+from news_fastapi.core.authors.exceptions import DeleteAuthorError
+from news_fastapi.core.authors.queries import AuthorDetailsService, AuthorsListService
 
 router = APIRouter()
 
@@ -53,15 +55,19 @@ async def get_default_author(
         ),
     ] = None,
     authors_auth: AuthorsAuth = Depends(Provide["authors_auth"]),
-    default_authors_service: DefaultAuthorsService = Depends(
-        Provide["default_authors_service"]
+    default_authors_service: DefaultAuthorService = Depends(
+        Provide["default_author_service"]
     ),
 ) -> GetDefaultAuthorResponseModel:
     if not user_id:
         user_id = authors_auth.get_current_user_id()
-    author = await default_authors_service.get_default_author(user_id)
+    default_author_info = await default_authors_service.get_default_author(user_id)
     return GetDefaultAuthorResponseModel(
-        author=Author(id=author.id, name=author.name) if author else None
+        author=Author(
+            id=default_author_info.author.id, name=default_author_info.author.name
+        )
+        if default_author_info
+        else None
     )
 
 
@@ -94,13 +100,13 @@ async def set_default_author(
         ),
     ] = None,
     authors_auth: AuthorsAuth = Depends(Provide["authors_auth"]),
-    default_authors_service: DefaultAuthorsService = Depends(
-        Provide["default_authors_service"]
+    default_author_service: DefaultAuthorService = Depends(
+        Provide["default_author_service"]
     ),
 ) -> None:
     if not user_id:
         user_id = authors_auth.get_current_user_id()
-    await default_authors_service.set_default_author(user_id, author_id)
+    await default_author_service.set_default_author(user_id, author_id)
 
 
 class CreateAuthorResponseModel(BaseModel):
@@ -119,10 +125,12 @@ class CreateAuthorResponseModel(BaseModel):
 @inject
 async def create_author(
     name: Annotated[str, Body(embed=True, examples=["John Doe"])],
-    authors_service: AuthorsService = Depends(Provide["authors_service"]),
+    create_author_service: CreateAuthorService = Depends(
+        Provide["create_author_service"]
+    ),
 ) -> CreateAuthorResponseModel:
-    author_id = await authors_service.create_author(name=name)
-    return CreateAuthorResponseModel(id=author_id)
+    result = await create_author_service.create_author(name=name)
+    return CreateAuthorResponseModel(id=result.author.id)
 
 
 @router.get(
@@ -141,8 +149,8 @@ async def get_list_of_authors(
         limit = DEFAULT_AUTHORS_LIST_LIMIT
     if offset is None:
         offset = 0
-    authors_list = await authors_list_service.get_page(offset=offset, limit=limit)
-    return [Author(id=author.id, name=author.name) for author in authors_list]
+    page = await authors_list_service.get_page(offset=offset, limit=limit)
+    return [Author(id=item.author_id, name=item.name) for item in page.items]
 
 
 @router.get(
@@ -154,10 +162,12 @@ async def get_list_of_authors(
 @inject
 async def get_author_by_id(
     author_id: AuthorIdInPath,
-    authors_service: AuthorsService = Depends(Provide["authors_service"]),
+    author_details_service: AuthorDetailsService = Depends(
+        Provide["author_details_service"]
+    ),
 ) -> Author:
-    author = await authors_service.get_author(author_id)
-    return Author(id=author.id, name=author.name)
+    details = await author_details_service.get_author(author_id)
+    return Author(id=details.author_id, name=details.name)
 
 
 @router.put(
@@ -170,9 +180,11 @@ async def get_author_by_id(
 async def update_author(
     author_id: AuthorIdInPath,
     name: Annotated[str, Body(embed=True, examples=["John Doe"])],
-    authors_service: AuthorsService = Depends(Provide["authors_service"]),
+    update_author_service: UpdateAuthorService = Depends(
+        Provide["update_author_service"]
+    ),
 ) -> None:
-    await authors_service.update_author(author_id=author_id, new_name=name)
+    await update_author_service.update_author(author_id=author_id, new_name=name)
 
 
 @router.delete(
@@ -184,9 +196,11 @@ async def update_author(
 @inject
 async def delete_author(
     author_id: AuthorIdInPath,
-    authors_service: AuthorsService = Depends(Provide["authors_service"]),
+    delete_author_service: DeleteAuthorService = Depends(
+        Provide["delete_author_service"]
+    ),
 ) -> None:
     try:
-        await authors_service.delete_author(author_id=author_id)
+        await delete_author_service.delete_author(author_id=author_id)
     except DeleteAuthorError as err:
         raise HTTPException(status_code=HTTP_409_CONFLICT, detail=str(err)) from err

@@ -2,10 +2,9 @@ from datetime import datetime as DateTime
 from unittest import IsolatedAsyncioTestCase
 from uuid import UUID, uuid4
 
-from news_fastapi.adapters.persistence.tortoise.draft import (
-    DraftModel,
-    TortoiseDraftRepository,
-)
+from news_fastapi.adapters.persistence.tortoise.draft import TortoiseDraftRepository, \
+    TortoiseDraftsListQueries, TortoiseDraftDetailsQueries
+from news_fastapi.adapters.persistence.tortoise.models import DraftModel, AuthorModel
 from news_fastapi.domain.draft import Draft
 from news_fastapi.domain.value_objects import Image
 from news_fastapi.utils.exceptions import NotFoundError
@@ -14,13 +13,7 @@ from tests.fixtures import HEADLINES, PREDICTABLE_IDS_A, PREDICTABLE_IDS_B, TEXT
 from tests.utils import AssertMixin
 
 
-class TortoiseDraftRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
-    def setUp(self) -> None:
-        self.repository = TortoiseDraftRepository()
-
-    async def asyncSetUp(self) -> None:
-        await self.enterAsyncContext(tortoise_orm_lifespan())
-
+class DraftTestsMixin:
     def _create_valid_draft_model_instance(self) -> DraftModel:
         return DraftModel(
             id="11111111-1111-1111-1111-111111111111",
@@ -36,22 +29,12 @@ class TortoiseDraftRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
             is_published=False,
         )
 
-    def _create_draft(self) -> Draft:
-        return Draft(
-            id_="11111111-1111-1111-1111-111111111111",
-            news_article_id="22222222-2222-2222-2222-222222222222",
-            headline="The Headline",
-            date_published=DateTime.fromisoformat("2023-01-01T12:00:00+0000"),
-            author_id="33333333-3333-3333-3333-333333333333",
-            image=Image(
-                url="https://example.com/images/1234",
-                description="The description of the image",
-                author="Emma Brown",
-            ),
-            text="The text of the draft.",
-            created_by_user_id="44444444-4444-4444-4444-444444444444",
-            is_published=False,
-        )
+    async def _populate_author(self, author_id: str | None = None) -> AuthorModel:
+        if author_id is None:
+            author_id = str(uuid4())
+        author_model_instance = AuthorModel(id=author_id, name="Lauren Brown")
+        await author_model_instance.save()
+        return author_model_instance
 
     async def _populate_draft(self) -> DraftModel:
         draft_model_instance = self._create_valid_draft_model_instance()
@@ -85,6 +68,92 @@ class TortoiseDraftRepositoryTests(AssertMixin, IsolatedAsyncioTestCase):
                 is_published=False,
             )
             await draft_model_instance.save()
+
+
+class TortoiseDraftsListQueriesTests(DraftTestsMixin, AssertMixin, IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        self.queries = TortoiseDraftsListQueries()
+
+    async def asyncSetUp(self) -> None:
+        await self.enterAsyncContext(tortoise_orm_lifespan())
+
+    async def test_get_page(self) -> None:
+        await self._populate_drafts()
+        offset = 0
+        limit = 10
+        page = await self.queries.get_page(offset=offset, limit=limit)
+        self.assertEqual(page.offset, offset)
+        self.assertEqual(page.limit, limit)
+        self.assertEqual(len(page.items), limit)
+
+    async def test_get_page_too_big_offset_returns_empty_list(self) -> None:
+        await self._populate_drafts()
+        page = await self.queries.get_page(offset=10000, limit=10)
+        self.assertEmpty(page.items)
+
+    async def test_get_page_negative_offset_raises_value_error(self) -> None:
+        await self._populate_drafts()
+        with self.assertRaises(ValueError):
+            await self.queries.get_page(offset=-1, limit=10)
+
+
+class TortoiseDraftDetailsQueriesTests(DraftTestsMixin, IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        self.queries = TortoiseDraftDetailsQueries()
+
+    async def asyncSetUp(self) -> None:
+        await self.enterAsyncContext(tortoise_orm_lifespan())
+
+    async def test_get_draft(self) -> None:
+        saved_draft_model_instance = await self._populate_draft()
+        saved_author_model_instance = await self._populate_author(
+            author_id=saved_draft_model_instance.author_id
+        )
+
+        draft_id = saved_draft_model_instance.id
+        details = await self.queries.get_draft(draft_id=draft_id)
+        self.assertEqual(details.draft_id, draft_id)
+        self.assertEqual(details.news_article_id, saved_draft_model_instance.news_article_id)
+        self.assertEqual(details.created_by_user_id, saved_draft_model_instance.created_by_user_id)
+        self.assertEqual(details.headline, saved_draft_model_instance.headline)
+        self.assertEqual(details.date_published, saved_draft_model_instance.date_published)
+        self.assertEqual(details.author.author_id, saved_author_model_instance.id)
+        self.assertEqual(details.author.name, saved_author_model_instance.name)
+        self.assertEqual(details.image.url, saved_draft_model_instance.image_url)
+        self.assertEqual(details.image.description, saved_draft_model_instance.image_description)
+        self.assertEqual(details.image.author, saved_draft_model_instance.image_author)
+        self.assertEqual(details.text, saved_draft_model_instance.text)
+        self.assertEqual(details.is_published, saved_draft_model_instance.is_published)
+
+    async def test_get_draft_raises_not_found(self) -> None:
+        non_existent_draft_id = str(uuid4())
+        with self.assertRaises(NotFoundError):
+            await self.queries.get_draft(draft_id=non_existent_draft_id)
+
+
+class TortoiseDraftRepositoryTests(DraftTestsMixin, AssertMixin, IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        self.repository = TortoiseDraftRepository()
+
+    async def asyncSetUp(self) -> None:
+        await self.enterAsyncContext(tortoise_orm_lifespan())
+
+    def _create_draft(self) -> Draft:
+        return Draft(
+            id_="11111111-1111-1111-1111-111111111111",
+            news_article_id="22222222-2222-2222-2222-222222222222",
+            headline="The Headline",
+            date_published=DateTime.fromisoformat("2023-01-01T12:00:00+0000"),
+            author_id="33333333-3333-3333-3333-333333333333",
+            image=Image(
+                url="https://example.com/images/1234",
+                description="The description of the image",
+                author="Emma Brown",
+            ),
+            text="The text of the draft.",
+            created_by_user_id="44444444-4444-4444-4444-444444444444",
+            is_published=False,
+        )
 
     def assertDraftAndModelAreCompletelyEqual(
         self, draft: Draft, model_instance: DraftModel

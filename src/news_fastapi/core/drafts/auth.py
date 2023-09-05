@@ -21,6 +21,14 @@ class DraftsAuth(ABC):
             raise AuthorizationError("User doesn't have permission to get a draft")
 
     @abstractmethod
+    def can_get_drafts_list(self) -> bool:
+        raise NotImplementedError
+
+    def check_get_drafts_list(self) -> None:
+        if not self.can_get_drafts_list():
+            raise AuthorizationError("User doesn't have permission to get drafts list")
+
+    @abstractmethod
     def can_update_draft(self, draft_id: str) -> bool:
         raise NotImplementedError
 

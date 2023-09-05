@@ -1,13 +1,23 @@
-from collections.abc import Iterable
-from datetime import datetime as DateTime
+from collections.abc import Iterable, Mapping
 from typing import Collection
 from uuid import uuid4
 
-from tortoise import Model
 from tortoise.exceptions import DoesNotExist
-from tortoise.fields import DatetimeField, TextField
 from tortoise.queryset import QuerySet
 
+from news_fastapi.adapters.persistence.tortoise.models import (
+    AuthorModel,
+    NewsArticleModel,
+)
+from news_fastapi.core.news.queries import (
+    NewsArticleDetails,
+    NewsArticleDetailsAuthor,
+    NewsArticleDetailsQueries,
+    NewsArticlesListAuthor,
+    NewsArticlesListItem,
+    NewsArticlesListPage,
+    NewsArticlesListQueries,
+)
 from news_fastapi.domain.news_article import (
     NewsArticle,
     NewsArticleListFilter,
@@ -17,19 +27,113 @@ from news_fastapi.domain.value_objects import Image
 from news_fastapi.utils.exceptions import NotFoundError
 
 
-class NewsArticleModel(Model):
-    id: str = TextField(pk=True)
-    headline: str = TextField()
-    date_published: DateTime = DatetimeField()
-    author_id: str = TextField()
-    image_url: str = TextField()
-    image_description: str = TextField()
-    image_author: str = TextField()
-    text: str = TextField()
-    revoke_reason: str | None = TextField(null=True)
+class TortoiseNewsArticlesListQueries(NewsArticlesListQueries):
+    async def get_page(
+        self,
+        offset: int = 0,
+        limit: int = 50,
+        filter_: NewsArticleListFilter | None = None,
+    ) -> NewsArticlesListPage:
+        if offset < 0:
+            raise ValueError("Offset must be positive integer")
+        model_instances_list = await self._fetch_news_article_list(
+            offset, limit, filter_
+        )
+        author_model_mapping = await self._fetch_author_mapping(model_instances_list)
+        items = [
+            self._to_item(model_instance, author_model_mapping)
+            for model_instance in model_instances_list
+        ]
+        return NewsArticlesListPage(
+            offset=offset,
+            limit=limit,
+            items=items,
+        )
 
-    class Meta:
-        table = "news_articles"
+    async def _fetch_news_article_list(
+        self,
+        offset: int,
+        limit: int,
+        filter_: NewsArticleListFilter | None = None,
+    ) -> Collection[NewsArticleModel]:
+        queryset = NewsArticleModel.all()
+        if filter_ is not None:
+            queryset = self._apply_filter_to_queryset(filter_, queryset)
+        return await queryset.offset(offset).limit(limit)
+
+    def _apply_filter_to_queryset(
+        self, filter_: NewsArticleListFilter, queryset: QuerySet[NewsArticleModel]
+    ) -> QuerySet[NewsArticleModel]:
+        if filter_.revoked == "no_revoked":
+            queryset = queryset.filter(revoke_reason__isnull=True)
+        elif filter_.revoked == "only_revoked":
+            queryset = queryset.filter(revoke_reason__isnull=False)
+        return queryset
+
+    async def _fetch_author_mapping(
+        self, news_article_model_instances_list: Iterable[NewsArticleModel]
+    ) -> Mapping[str, AuthorModel]:
+        return await AuthorModel.in_bulk(
+            id_list=(
+                model_instance.author_id
+                for model_instance in news_article_model_instances_list
+            ), field_name="id"
+        )
+
+    def _to_item(
+        self,
+        news_article_model_instance: NewsArticleModel,
+        author_model_mapping: Mapping[str, AuthorModel],
+    ) -> NewsArticlesListItem:
+        author_model_instance = author_model_mapping.get(
+            news_article_model_instance.author_id
+        )
+        if author_model_instance is None:
+            raise NotFoundError(
+                f"News article '{news_article_model_instance.id}' contains "
+                f"non-existent author ID '{news_article_model_instance.author_id}'"
+            )
+        return NewsArticlesListItem(
+            news_article_id=news_article_model_instance.id,
+            headline=news_article_model_instance.headline,
+            date_published=news_article_model_instance.date_published,
+            author=NewsArticlesListAuthor(
+                author_id=author_model_instance.id,
+                name=author_model_instance.name,
+            ),
+            revoke_reason=news_article_model_instance.revoke_reason,
+        )
+
+
+class TortoiseNewsArticleDetailsQueries(NewsArticleDetailsQueries):
+    async def get_news_article(self, news_article_id: str) -> NewsArticleDetails:
+        try:
+            model_instance = await NewsArticleModel.get(id=news_article_id)
+        except DoesNotExist as err:
+            raise NotFoundError("News article not found") from err
+        try:
+            author_model_instance = await AuthorModel.get(id=model_instance.author_id)
+        except DoesNotExist as err:
+            raise NotFoundError(
+                f"News article '{news_article_id}' contains"
+                f"non-existent author ID '{model_instance.author_id}'"
+            ) from err
+        return NewsArticleDetails(
+            news_article_id=model_instance.id,
+            headline=model_instance.headline,
+            date_published=model_instance.date_published,
+            author=NewsArticleDetailsAuthor(
+                author_id=author_model_instance.id,
+                name=author_model_instance.name,
+            ),
+            image=Image(
+                url=model_instance.image_url,
+                description=model_instance.image_description,
+                author=model_instance.image_author,
+            ),
+            text=model_instance.text,
+            revoke_reason=model_instance.revoke_reason,
+        )
 
 
 class TortoiseNewsArticleRepository(NewsArticleRepository):

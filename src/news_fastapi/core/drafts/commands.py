@@ -8,7 +8,7 @@ from news_fastapi.core.drafts.exceptions import (
     UpdateDraftError,
 )
 from news_fastapi.core.transaction import TransactionManager
-from news_fastapi.domain.author import Author, AuthorRepository, DefaultAuthorRepository
+from news_fastapi.domain.author import DefaultAuthorRepository
 from news_fastapi.domain.draft import Draft, DraftFactory, DraftRepository
 from news_fastapi.domain.news_article import NewsArticle, NewsArticleRepository
 from news_fastapi.domain.publish import PublishService
@@ -18,36 +18,17 @@ from news_fastapi.utils.sentinels import Undefined, UndefinedType
 
 
 @dataclass
-class DraftListItem:
+class CreateDraftResult:
     draft: Draft
 
 
-@dataclass
-class DraftView:
-    draft: Draft
-    author: Author
-
-
-class DraftsListService:
-    _draft_repository: DraftRepository
-
-    def __init__(self, draft_repository: DraftRepository) -> None:
-        self._draft_repository = draft_repository
-
-    async def get_page(self, offset: int, limit: int) -> list[DraftListItem]:
-        drafts_list = await self._draft_repository.get_drafts_list(offset, limit)
-        return [DraftListItem(draft=draft) for draft in drafts_list]
-
-
-class DraftsService:
+class CreateDraftService:
     _auth: DraftsAuth
     _transaction_manager: TransactionManager
     _draft_factory: DraftFactory
     _draft_repository: DraftRepository
     _default_author_repository: DefaultAuthorRepository
     _news_article_repository: NewsArticleRepository
-    _author_repository: AuthorRepository
-    _publish_service: PublishService
 
     def __init__(
         self,
@@ -57,8 +38,6 @@ class DraftsService:
         draft_repository: DraftRepository,
         default_author_repository: DefaultAuthorRepository,
         news_article_repository: NewsArticleRepository,
-        author_repository: AuthorRepository,
-        publish_service: PublishService,
     ) -> None:
         self._auth = auth
         self._transaction_manager = transaction_manager
@@ -66,17 +45,16 @@ class DraftsService:
         self._draft_repository = draft_repository
         self._default_author_repository = default_author_repository
         self._news_article_repository = news_article_repository
-        self._author_repository = author_repository
-        self._publish_service = publish_service
 
-    async def create_draft(self, news_article_id: str | None) -> Draft:
-        self._auth.check_create_draft()
-        if news_article_id is None:
-            draft = await self._create_draft_from_scratch()
-        else:
-            draft = await self._create_draft_for_news_article(news_article_id)
-        await self._draft_repository.save(draft)
-        return draft
+    async def create_draft(self, news_article_id: str | None) -> CreateDraftResult:
+        async with self._transaction_manager.in_transaction():
+            self._auth.check_create_draft()
+            if news_article_id is None:
+                draft = await self._create_draft_from_scratch()
+            else:
+                draft = await self._create_draft_for_news_article(news_article_id)
+            await self._draft_repository.save(draft)
+            return CreateDraftResult(draft=draft)
 
     async def _create_draft_from_scratch(self) -> Draft:
         current_user_id = self._auth.get_current_user_id()
@@ -113,11 +91,26 @@ class DraftsService:
         )
         return draft
 
-    async def get_draft(self, draft_id: str) -> DraftView:
-        self._auth.check_get_draft(draft_id)
-        draft = await self._draft_repository.get_draft_by_id(draft_id)
-        author = await self._author_repository.get_author_by_id(draft.author_id)
-        return DraftView(draft=draft, author=author)
+
+@dataclass
+class UpdateDraftResult:
+    updated_draft: Draft
+
+
+class UpdateDraftService:
+    _auth: DraftsAuth
+    _transaction_manager: TransactionManager
+    _draft_repository: DraftRepository
+
+    def __init__(
+        self,
+        auth: DraftsAuth,
+        transaction_manager: TransactionManager,
+        draft_repository: DraftRepository,
+    ) -> None:
+        self._auth = auth
+        self._transaction_manager = transaction_manager
+        self._draft_repository = draft_repository
 
     async def update_draft(
         self,
@@ -127,7 +120,7 @@ class DraftsService:
         new_author_id: str | UndefinedType = Undefined,
         new_image: Image | None | UndefinedType = Undefined,
         new_text: str | UndefinedType = Undefined,
-    ) -> None:
+    ) -> UpdateDraftResult:
         async with self._transaction_manager.in_transaction():
             self._auth.check_update_draft(draft_id)
             draft = await self._draft_repository.get_draft_by_id(draft_id)
@@ -144,23 +137,67 @@ class DraftsService:
             if new_text is not Undefined:
                 draft.text = new_text
             await self._draft_repository.save(draft)
+            return UpdateDraftResult(updated_draft=draft)
 
-    async def delete_draft(self, draft_id: str) -> None:
+
+@dataclass
+class DeleteDraftResult:
+    deleted_draft_id: str
+
+
+class DeleteDraftService:
+    _auth: DraftsAuth
+    _transaction_manager: TransactionManager
+    _draft_repository: DraftRepository
+
+    def __init__(
+        self,
+        auth: DraftsAuth,
+        transaction_manager: TransactionManager,
+        draft_repository: DraftRepository,
+    ) -> None:
+        self._auth = auth
+        self._transaction_manager = transaction_manager
+        self._draft_repository = draft_repository
+
+    async def delete_draft(self, draft_id: str) -> DeleteDraftResult:
         async with self._transaction_manager.in_transaction():
             self._auth.check_delete_draft(draft_id)
             draft = await self._draft_repository.get_draft_by_id(draft_id)
             if draft.is_published:
                 self._auth.check_delete_published_draft()
             await self._draft_repository.delete(draft)
-
-    async def publish_draft(self, draft_id: str) -> NewsArticle:
-        self._auth.check_publish_draft()
-        async with self._transaction_manager.in_transaction():
-            news_article = await self._publish_service.publish_draft(draft_id)
-            return news_article
+            return DeleteDraftResult(deleted_draft_id=draft_id)
 
     async def delete_drafts_of_author(self, author_id: str) -> None:
         async with self._transaction_manager.in_transaction():
             drafts = await self._draft_repository.get_drafts_for_author(author_id)
             for draft in drafts:
                 await self._draft_repository.delete(draft)
+
+
+@dataclass
+class PublishDraftResult:
+    published_news_article: NewsArticle
+
+
+class PublishDraftService:
+    _auth: DraftsAuth
+    _transaction_manager: TransactionManager
+    _publish_service: PublishService
+
+    def __init__(
+        self,
+        auth: DraftsAuth,
+        transaction_manager: TransactionManager,
+        publish_service: PublishService,
+    ) -> None:
+        self._auth = auth
+        self._transaction_manager = transaction_manager
+        self._publish_service = publish_service
+
+    async def publish_draft(self, draft_id: str) -> PublishDraftResult:
+        self._auth.check_publish_draft()
+        async with self._transaction_manager.in_transaction():
+            news_article = await self._publish_service.publish_draft(draft_id)
+            return PublishDraftResult(published_news_article=news_article)

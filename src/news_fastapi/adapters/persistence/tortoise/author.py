@@ -2,20 +2,48 @@ from collections.abc import Iterable
 from typing import Collection, Mapping
 from uuid import uuid4
 
-from tortoise import Model
 from tortoise.exceptions import DoesNotExist
-from tortoise.fields import TextField
 
+from news_fastapi.adapters.persistence.tortoise.models import (
+    AuthorModel,
+    DefaultAuthorModel,
+)
+from news_fastapi.core.authors.queries import (
+    AuthorDetails,
+    AuthorDetailsQueries,
+    AuthorsListItem,
+    AuthorsListPage,
+    AuthorsListQueries,
+)
 from news_fastapi.domain.author import Author, AuthorRepository, DefaultAuthorRepository
 from news_fastapi.utils.exceptions import NotFoundError
 
 
-class AuthorModel(Model):
-    id: str = TextField(pk=True)
-    name: str = TextField()
+class TortoiseAuthorsListQueries(AuthorsListQueries):
+    async def get_page(self, offset: int = 0, limit: int = 10) -> AuthorsListPage:
+        if offset < 0:
+            raise ValueError("Offset must be non-negative integer")
+        model_instances_list = await AuthorModel.all().offset(offset).limit(limit)
+        return AuthorsListPage(
+            offset=offset,
+            limit=limit,
+            items=[
+                AuthorsListItem(author_id=model_instance.id, name=model_instance.name)
+                for model_instance in model_instances_list
+            ],
+        )
 
-    class Meta:
-        table = "authors"
+
+class TortoiseAuthorDetailsQueries(AuthorDetailsQueries):
+    async def get_author(self, author_id: str) -> AuthorDetails:
+        try:
+            model_instance = await AuthorModel.get(id=author_id)
+        except DoesNotExist as err:
+            raise NotFoundError("Author not found") from err
+        return AuthorDetails(
+            author_id=model_instance.id,
+            name=model_instance.name,
+        )
 
 
 class TortoiseAuthorRepository(AuthorRepository):
@@ -63,27 +91,19 @@ class TortoiseAuthorRepository(AuthorRepository):
         ]
 
 
-class DefaultAuthor(Model):
-    user_id: str = TextField()
-    author_id: str = TextField()
-
-    class Meta:
-        table = "default_authors"
-
-
 class TortoiseDefaultAuthorRepository(DefaultAuthorRepository):
     async def get_default_author_id(self, user_id: str) -> str | None:
-        default_author = await DefaultAuthor.get_or_none(user_id=user_id)
+        default_author = await DefaultAuthorModel.get_or_none(user_id=user_id)
         if default_author is None:
             return None
         return default_author.author_id
 
     async def set_default_author_id(self, user_id: str, author_id: str | None) -> None:
         if author_id is None:
-            await DefaultAuthor.filter(user_id=user_id).delete()
+            await DefaultAuthorModel.filter(user_id=user_id).delete()
         else:
-            default_author = await DefaultAuthor.get_or_none(user_id=user_id)
+            default_author = await DefaultAuthorModel.get_or_none(user_id=user_id)
             if default_author is None:
-                default_author = DefaultAuthor(user_id=user_id)
+                default_author = DefaultAuthorModel(user_id=user_id)
             default_author.author_id = author_id
             await default_author.save()

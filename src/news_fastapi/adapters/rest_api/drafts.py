@@ -14,8 +14,14 @@ from news_fastapi.adapters.rest_api.parameters import (
     LimitInQuery,
     OffsetInQuery,
 )
+from news_fastapi.core.drafts.commands import (
+    CreateDraftService,
+    DeleteDraftService,
+    PublishDraftService,
+    UpdateDraftService,
+)
 from news_fastapi.core.drafts.exceptions import CreateDraftError
-from news_fastapi.core.drafts.services import DraftsListService, DraftsService
+from news_fastapi.core.drafts.queries import DraftDetailsService, DraftsListService
 from news_fastapi.domain.publish import DraftAlreadyPublishedError, InvalidDraftError
 
 router = APIRouter()
@@ -40,20 +46,20 @@ async def get_drafts_list(
         limit = DEFAULT_DRAFTS_LIST_LIMIT
     if offset is None:
         offset = 0
-    drafts_list = await drafts_list_service.get_page(offset, limit)
+    page = await drafts_list_service.get_page(offset, limit)
     return [
         DraftsListItem(
-            id=item.draft.id,
-            news_article_id=item.draft.news_article_id,
-            headline=item.draft.headline,
-            created_by_user_id=item.draft.created_by_user_id,
-            is_published=item.draft.is_published,
+            id=item.draft_id,
+            news_article_id=item.news_article_id,
+            headline=item.headline,
+            created_by_user_id=item.created_by_user_id,
+            is_published=item.is_published,
         )
-        for item in drafts_list
+        for item in page.items
     ]
 
 
-class CreateDraftResponse(BaseModel):
+class CreateDraftResponseModel(BaseModel):
     draft_id: str
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
@@ -61,7 +67,7 @@ class CreateDraftResponse(BaseModel):
 
 @router.post(
     "/",
-    response_model=CreateDraftResponse,
+    response_model=CreateDraftResponseModel,
     tags=["Drafts"],
     summary="Create a draft for news article",
 )
@@ -74,13 +80,13 @@ async def create_draft(
             examples=["11112222-3333-4444-5555-666677778888", None],
         ),
     ],
-    drafts_service: DraftsService = Depends(Provide["drafts_service"]),
-) -> CreateDraftResponse:
+    create_draft_service: CreateDraftService = Depends(Provide["create_draft_service"]),
+) -> CreateDraftResponseModel:
     try:
-        draft = await drafts_service.create_draft(news_article_id)
+        result = await create_draft_service.create_draft(news_article_id)
     except CreateDraftError as err:
         raise HTTPException(status_code=HTTP_409_CONFLICT, detail=str(err)) from err
-    return CreateDraftResponse(draft_id=draft.id)
+    return CreateDraftResponseModel(draft_id=result.draft.id)
 
 
 @router.get(
@@ -91,25 +97,25 @@ async def create_draft(
 )
 async def get_draft_by_id(
     draft_id: DraftIdInPath,
-    drafts_service: DraftsService = Depends(Provide["drafts_service"]),
+    draft_details_service: DraftDetailsService = Depends(
+        Provide["draft_details_service"]
+    ),
 ) -> Draft:
-    draft = await drafts_service.get_draft(draft_id)
+    details = await draft_details_service.get_draft(draft_id)
     return Draft(
-        id=draft.draft.id,
-        news_article_id=draft.draft.news_article_id,
-        headline=draft.draft.headline,
+        id=details.draft_id,
+        news_article_id=details.news_article_id,
+        headline=details.headline,
         date_published=(
-            draft.draft.date_published.isoformat()
-            if draft.draft.date_published
-            else None
+            details.date_published.isoformat() if details.date_published else None
         ),
         author=Author(
-            id=draft.author.id,
-            name=draft.author.name,
+            id=details.author.author_id,
+            name=details.author.name,
         ),
-        text=draft.draft.text,
-        created_by_user_id=draft.draft.created_by_user_id,
-        is_published=draft.draft.is_published,
+        text=details.text,
+        created_by_user_id=details.created_by_user_id,
+        is_published=details.is_published,
     )
 
 
@@ -156,14 +162,14 @@ async def update_draft(
             examples=["Full text of the news article..."],
         ),
     ],
-    drafts_service: DraftsService = Depends(Provide["drafts_service"]),
+    update_draft_service: UpdateDraftService = Depends(Provide["update_draft_service"]),
 ) -> None:
-    await drafts_service.update_draft(
+    await update_draft_service.update_draft(
         draft_id=draft_id,
         new_headline=headline,
-        new_date_published=DateTime.fromisoformat(date_published)
-        if date_published
-        else None,
+        new_date_published=(
+            DateTime.fromisoformat(date_published) if date_published else None
+        ),
         new_author_id=author_id,
         new_text=text,
     )
@@ -177,9 +183,9 @@ async def update_draft(
 )
 async def delete_draft(
     draft_id: DraftIdInPath,
-    drafts_service: DraftsService = Depends(Provide["drafts_service"]),
+    delete_draft_service: DeleteDraftService = Depends(Provide["delete_draft_service"]),
 ) -> None:
-    await drafts_service.delete_draft(draft_id)
+    await delete_draft_service.delete_draft(draft_id)
 
 
 class PublishDraftResponse(BaseModel):
@@ -196,10 +202,12 @@ class PublishDraftResponse(BaseModel):
 )
 async def publish_draft(
     draft_id: DraftIdInPath,
-    drafts_service: DraftsService = Depends(Provide["drafts_service"]),
+    publish_draft_service: PublishDraftService = Depends(
+        Provide["publish_draft_service"]
+    ),
 ) -> PublishDraftResponse | JSONResponse:
     try:
-        news_article = await drafts_service.publish_draft(draft_id)
+        result = await publish_draft_service.publish_draft(draft_id)
     except DraftAlreadyPublishedError as err:
         raise HTTPException(status_code=HTTP_409_CONFLICT, detail=str(err)) from err
     except InvalidDraftError as err:
@@ -215,4 +223,4 @@ async def publish_draft(
             },
             status_code=HTTP_409_CONFLICT,
         )
-    return PublishDraftResponse(news_article_id=news_article.id)
+    return PublishDraftResponse(news_article_id=result.published_news_article.id)
