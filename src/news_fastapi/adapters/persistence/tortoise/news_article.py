@@ -77,7 +77,8 @@ class TortoiseNewsArticlesListQueries(NewsArticlesListQueries):
             id_list=(
                 model_instance.author_id
                 for model_instance in news_article_model_instances_list
-            ), field_name="id"
+            ),
+            field_name="id",
         )
 
     def _to_item(

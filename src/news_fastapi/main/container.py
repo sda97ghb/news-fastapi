@@ -1,5 +1,4 @@
-from collections.abc import AsyncIterable
-from typing import Any
+from contextlib import asynccontextmanager
 
 # pylint: disable=no-name-in-module
 from dependency_injector.containers import DeclarativeContainer, WiringConfiguration
@@ -11,6 +10,9 @@ from dependency_injector.providers import (
     Object,
     Singleton,
 )
+from dependency_injector.wiring import Provide, inject
+from fastapi import FastAPI
+from tortoise import Tortoise
 
 from news_fastapi.adapters.auth.http_request import RequestAuthFactory, RequestHolder
 from news_fastapi.adapters.auth.jwt_mock import MockJWTConfig
@@ -33,6 +35,7 @@ from news_fastapi.adapters.persistence.tortoise.news_article import (
 from news_fastapi.adapters.persistence.tortoise.transaction import (
     TortoiseTransactionManager,
 )
+from news_fastapi.adapters.rest_api.asgi import create_asgi_app
 from news_fastapi.core.authors.commands import (
     CreateAuthorService,
     DeleteAuthorService,
@@ -57,19 +60,18 @@ from news_fastapi.domain.author import AuthorFactory
 from news_fastapi.domain.draft import DraftFactory
 from news_fastapi.domain.news_article import NewsArticleFactory
 from news_fastapi.domain.publish import PublishService
-from news_fastapi.domain.seed_work.events import DomainEvent, DomainEventBuffer
+from news_fastapi.domain.seed_work.events import DomainEventBuffer
 
 
-async def mock_event_stream() -> AsyncIterable[DomainEvent]:
-    # pylint: disable=import-outside-toplevel
-    from dataclasses import dataclass
-
-    @dataclass(kw_only=True, frozen=True)
-    class MockEvent(DomainEvent):
-        def _to_json_extra_fields(self) -> dict[str, Any]:
-            return {}
-
-    yield MockEvent()
+@asynccontextmanager
+@inject
+async def asgi_lifespan(
+    app: FastAPI,  # pylint: disable=redefined-outer-name,unused-argument
+    tortoise_config: dict = Provide["tortoise_config"],
+):
+    await Tortoise.init(config=tortoise_config)
+    yield
+    await Tortoise.close_connections()
 
 
 class DIContainer(DeclarativeContainer):
@@ -264,6 +266,16 @@ class DIContainer(DeclarativeContainer):
                 )
             )
         ),
+    )
+
+    # endregion
+
+    # region ASGI app
+
+    asgi_app = Singleton(
+        create_asgi_app,
+        config=config.fastapi,
+        lifespan=Object(asgi_lifespan),
     )
 
     # endregion

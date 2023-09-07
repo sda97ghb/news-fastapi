@@ -3,16 +3,23 @@ from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
-from news_fastapi.core.drafts.commands import CreateDraftService, UpdateDraftService, \
-    DeleteDraftService, PublishDraftService
+from news_fastapi.core.drafts.commands import (
+    CreateDraftService,
+    DeleteDraftService,
+    PublishDraftService,
+    UpdateDraftService,
+)
 from news_fastapi.core.exceptions import AuthorizationError
 from news_fastapi.domain.draft import DraftFactory
 from news_fastapi.domain.value_objects import Image
 from news_fastapi.utils.exceptions import NotFoundError
 from tests.core.drafts.mixins import DraftsTestsMixin
 from tests.core.fixtures import DraftsAuthFixture, TransactionManagerFixture
-from tests.domain.fixtures import DraftRepositoryFixture, \
-    DefaultAuthorRepositoryFixture, NewsArticleRepositoryFixture
+from tests.domain.fixtures import (
+    DefaultAuthorRepositoryFixture,
+    DraftRepositoryFixture,
+    NewsArticleRepositoryFixture,
+)
 from tests.utils import AssertMixin
 
 

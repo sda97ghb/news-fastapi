@@ -27,12 +27,14 @@ paths:
                   author:
                     id: "ab82bcea-f04e-45f9-8b4f-9645a5a401a0"
                     name: "John Doe"
+                  revokeReason: null
                 - id: "f701740c-4f6b-4ddb-a567-741d8aae23ba"
                   headline: "Cat Dresses: Dos and Don'ts"
                   datePublished: "2022-01-01T17:00:00+0000"
                   author:
                     id: "6da7e3d0-3e4b-4125-a087-d64b77fe8ba8"
                     name: "Jane Smith"
+                  revokeReason: "Fake"
   /news/{newsArticleId}:
     get:
       tags:
@@ -59,6 +61,7 @@ paths:
                   description: "The description of the image"
                   author: "Emma Brown"
                 text: "Full text of the news article"
+                revokeReason: null
         404:
           description: "News article not found"
   /news/{newsArticleId}/revoke:
@@ -450,7 +453,7 @@ paths:
         - "Authors"
       summary: "Default author for user"
       parameters:
-        - name: "userId"
+        - name: "user-id"
           in: query
           description: "ID of the user for which need to know default author. If this parameter is not set or is set to null, current user's ID will be used"
           schema:
@@ -634,7 +637,7 @@ components:
             - author
         text:
           type: string
-        revoke_reason:
+        revokeReason:
           type: string
           nullable: true
       required:
@@ -644,7 +647,7 @@ components:
         - author
         - image
         - text
-        - revoke_reason
+        - revokeReason
     NewsArticlesListItem:
       type: object
       properties:
@@ -656,7 +659,7 @@ components:
           type: string
         author:
           $ref: "#/components/schemas/Author"
-        revoke_reason:
+        revokeReason:
           type: string
           nullable: true
       required:
@@ -664,7 +667,7 @@ components:
         - headline
         - datePublished
         - author
-        - revoke_reason
+        - revokeReason
   parameters:
     NewsArticleIdInPath:
       name: "newsArticleId"

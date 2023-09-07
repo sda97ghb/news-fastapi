@@ -2,9 +2,10 @@ from unittest import IsolatedAsyncioTestCase, TestCase
 from uuid import UUID, uuid4
 
 from news_fastapi.adapters.persistence.tortoise.author import (
-    TortoiseAuthorRepository,
-    TortoiseDefaultAuthorRepository, TortoiseAuthorsListQueries,
     TortoiseAuthorDetailsQueries,
+    TortoiseAuthorRepository,
+    TortoiseAuthorsListQueries,
+    TortoiseDefaultAuthorRepository,
 )
 from news_fastapi.adapters.persistence.tortoise.models import (
     AuthorModel,
@@ -34,7 +35,9 @@ class AuthorTestsMixin:
             await AuthorModel.create(id=str(uuid4()), name=name)
 
 
-class TortoiseAuthorsListQueriesTests(AuthorTestsMixin, AssertMixin, IsolatedAsyncioTestCase):
+class TortoiseAuthorsListQueriesTests(
+    AuthorTestsMixin, AssertMixin, IsolatedAsyncioTestCase
+):
     def setUp(self) -> None:
         self.queries = TortoiseAuthorsListQueries()
 
@@ -81,7 +84,9 @@ class TortoiseAuthorDetailsQueriesTests(AuthorTestsMixin, IsolatedAsyncioTestCas
             await self.queries.get_author(author_id=non_existent_author_id)
 
 
-class TortoiseAuthorRepositoryTests(AuthorTestsMixin, AssertMixin, IsolatedAsyncioTestCase):
+class TortoiseAuthorRepositoryTests(
+    AuthorTestsMixin, AssertMixin, IsolatedAsyncioTestCase
+):
     def setUp(self) -> None:
         self.repository = TortoiseAuthorRepository()
 

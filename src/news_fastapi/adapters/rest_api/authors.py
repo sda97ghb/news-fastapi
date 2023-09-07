@@ -51,7 +51,7 @@ async def get_default_author(
                 "current user's ID will be used"
             ),
             examples=["1234"],
-            alias="userId",
+            alias="user-id",
         ),
     ] = None,
     authors_auth: AuthorsAuth = Depends(Provide["authors_auth"]),
@@ -61,7 +61,9 @@ async def get_default_author(
 ) -> GetDefaultAuthorResponseModel:
     if not user_id:
         user_id = authors_auth.get_current_user_id()
-    default_author_info = await default_authors_service.get_default_author(user_id)
+    default_author_info = await default_authors_service.get_default_author(
+        user_id=user_id
+    )
     return GetDefaultAuthorResponseModel(
         author=Author(
             id=default_author_info.author.id, name=default_author_info.author.name
@@ -106,11 +108,13 @@ async def set_default_author(
 ) -> None:
     if not user_id:
         user_id = authors_auth.get_current_user_id()
-    await default_author_service.set_default_author(user_id, author_id)
+    await default_author_service.set_default_author(
+        user_id=user_id, author_id=author_id
+    )
 
 
 class CreateAuthorResponseModel(BaseModel):
-    id: str
+    author_id: str
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
@@ -130,7 +134,7 @@ async def create_author(
     ),
 ) -> CreateAuthorResponseModel:
     result = await create_author_service.create_author(name=name)
-    return CreateAuthorResponseModel(id=result.author.id)
+    return CreateAuthorResponseModel(author_id=result.author.id)
 
 
 @router.get(
@@ -166,7 +170,7 @@ async def get_author_by_id(
         Provide["author_details_service"]
     ),
 ) -> Author:
-    details = await author_details_service.get_author(author_id)
+    details = await author_details_service.get_author(author_id=author_id)
     return Author(id=details.author_id, name=details.name)
 
 

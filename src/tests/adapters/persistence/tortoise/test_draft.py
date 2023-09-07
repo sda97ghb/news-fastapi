@@ -2,9 +2,12 @@ from datetime import datetime as DateTime
 from unittest import IsolatedAsyncioTestCase
 from uuid import UUID, uuid4
 
-from news_fastapi.adapters.persistence.tortoise.draft import TortoiseDraftRepository, \
-    TortoiseDraftsListQueries, TortoiseDraftDetailsQueries
-from news_fastapi.adapters.persistence.tortoise.models import DraftModel, AuthorModel
+from news_fastapi.adapters.persistence.tortoise.draft import (
+    TortoiseDraftDetailsQueries,
+    TortoiseDraftRepository,
+    TortoiseDraftsListQueries,
+)
+from news_fastapi.adapters.persistence.tortoise.models import AuthorModel, DraftModel
 from news_fastapi.domain.draft import Draft
 from news_fastapi.domain.value_objects import Image
 from news_fastapi.utils.exceptions import NotFoundError
@@ -70,7 +73,9 @@ class DraftTestsMixin:
             await draft_model_instance.save()
 
 
-class TortoiseDraftsListQueriesTests(DraftTestsMixin, AssertMixin, IsolatedAsyncioTestCase):
+class TortoiseDraftsListQueriesTests(
+    DraftTestsMixin, AssertMixin, IsolatedAsyncioTestCase
+):
     def setUp(self) -> None:
         self.queries = TortoiseDraftsListQueries()
 
@@ -113,14 +118,22 @@ class TortoiseDraftDetailsQueriesTests(DraftTestsMixin, IsolatedAsyncioTestCase)
         draft_id = saved_draft_model_instance.id
         details = await self.queries.get_draft(draft_id=draft_id)
         self.assertEqual(details.draft_id, draft_id)
-        self.assertEqual(details.news_article_id, saved_draft_model_instance.news_article_id)
-        self.assertEqual(details.created_by_user_id, saved_draft_model_instance.created_by_user_id)
+        self.assertEqual(
+            details.news_article_id, saved_draft_model_instance.news_article_id
+        )
+        self.assertEqual(
+            details.created_by_user_id, saved_draft_model_instance.created_by_user_id
+        )
         self.assertEqual(details.headline, saved_draft_model_instance.headline)
-        self.assertEqual(details.date_published, saved_draft_model_instance.date_published)
+        self.assertEqual(
+            details.date_published, saved_draft_model_instance.date_published
+        )
         self.assertEqual(details.author.author_id, saved_author_model_instance.id)
         self.assertEqual(details.author.name, saved_author_model_instance.name)
         self.assertEqual(details.image.url, saved_draft_model_instance.image_url)
-        self.assertEqual(details.image.description, saved_draft_model_instance.image_description)
+        self.assertEqual(
+            details.image.description, saved_draft_model_instance.image_description
+        )
         self.assertEqual(details.image.author, saved_draft_model_instance.image_author)
         self.assertEqual(details.text, saved_draft_model_instance.text)
         self.assertEqual(details.is_published, saved_draft_model_instance.is_published)
@@ -131,7 +144,9 @@ class TortoiseDraftDetailsQueriesTests(DraftTestsMixin, IsolatedAsyncioTestCase)
             await self.queries.get_draft(draft_id=non_existent_draft_id)
 
 
-class TortoiseDraftRepositoryTests(DraftTestsMixin, AssertMixin, IsolatedAsyncioTestCase):
+class TortoiseDraftRepositoryTests(
+    DraftTestsMixin, AssertMixin, IsolatedAsyncioTestCase
+):
     def setUp(self) -> None:
         self.repository = TortoiseDraftRepository()
 

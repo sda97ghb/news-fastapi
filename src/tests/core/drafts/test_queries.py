@@ -2,7 +2,7 @@ from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
-from news_fastapi.core.drafts.queries import DraftsListService, DraftDetailsService
+from news_fastapi.core.drafts.queries import DraftDetailsService, DraftsListService
 from news_fastapi.core.exceptions import AuthorizationError
 from tests.core.fixtures import DraftsAuthFixture
 
@@ -12,18 +12,16 @@ class DraftsListServiceTests(IsolatedAsyncioTestCase):
         self.auth = DraftsAuthFixture(current_user_id=str(uuid4()))
         self.draft_list_queries = AsyncMock()
         self.service = DraftsListService(
-            drafts_auth=self.auth,
-            draft_list_queries=self.draft_list_queries
+            drafts_auth=self.auth, draft_list_queries=self.draft_list_queries
         )
-    
+
     async def test_get_page(self) -> None:
         page_mock = Mock()
         self.draft_list_queries.get_page.return_value = page_mock
         offset = 20
         limit = 10
         page = await self.service.get_page(offset=offset, limit=limit)
-        self.draft_list_queries.get_page.assert_awaited_with(
-            offset=offset, limit=limit)
+        self.draft_list_queries.get_page.assert_awaited_with(offset=offset, limit=limit)
         self.assertIs(page, page_mock)
 
     async def test_get_page_requires_authorization(self) -> None:

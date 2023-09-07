@@ -1,7 +1,7 @@
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, Mock
 
-from news_fastapi.core.authors.queries import AuthorsListService, AuthorDetailsService
+from news_fastapi.core.authors.queries import AuthorDetailsService, AuthorsListService
 
 
 class AuthorsListServiceTests(IsolatedAsyncioTestCase):
@@ -18,7 +18,8 @@ class AuthorsListServiceTests(IsolatedAsyncioTestCase):
         limit = 10
         page = await self.service.get_page(offset=offset, limit=limit)
         self.authors_list_queries.get_page.assert_awaited_with(
-            offset=offset, limit=limit)
+            offset=offset, limit=limit
+        )
         self.assertIs(page, page_mock)
 
 

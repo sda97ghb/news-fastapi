@@ -6,6 +6,7 @@ from starlette.status import HTTP_204_NO_CONTENT
 
 from news_fastapi.adapters.rest_api.models import (
     Author,
+    Image,
     NewsArticle,
     NewsArticlesListItem,
 )
@@ -44,7 +45,9 @@ async def get_news_list(
         limit = DEFAULT_NEWS_LIST_LIMIT
     if offset is None:
         offset = 0
-    page = await news_articles_list_service.get_page(offset=offset, limit=limit)
+    page = await news_articles_list_service.get_page(
+        offset=offset, limit=limit, filter_=None
+    )
     return [
         NewsArticlesListItem(
             id=item.news_article_id,
@@ -83,6 +86,11 @@ async def get_news_article(
         author=Author(
             id=details.author.author_id,
             name=details.author.name,
+        ),
+        image=Image(
+            url=details.image.url,
+            description=details.image.description,
+            author=details.image.author,
         ),
         text=details.text,
         revoke_reason=details.revoke_reason,

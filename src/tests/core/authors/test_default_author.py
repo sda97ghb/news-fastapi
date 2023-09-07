@@ -1,5 +1,5 @@
 from unittest import IsolatedAsyncioTestCase
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 from news_fastapi.core.authors.default_author import DefaultAuthorService

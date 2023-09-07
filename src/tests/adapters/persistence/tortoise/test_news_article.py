@@ -2,11 +2,14 @@ from datetime import datetime as DateTime
 from unittest import IsolatedAsyncioTestCase, TestCase
 from uuid import UUID, uuid4
 
-from news_fastapi.adapters.persistence.tortoise.models import NewsArticleModel, \
-    AuthorModel
+from news_fastapi.adapters.persistence.tortoise.models import (
+    AuthorModel,
+    NewsArticleModel,
+)
 from news_fastapi.adapters.persistence.tortoise.news_article import (
-    TortoiseNewsArticleRepository, TortoiseNewsArticlesListQueries,
     TortoiseNewsArticleDetailsQueries,
+    TortoiseNewsArticleRepository,
+    TortoiseNewsArticlesListQueries,
 )
 from news_fastapi.domain.news_article import NewsArticle, NewsArticleListFilter
 from news_fastapi.domain.value_objects import Image
@@ -18,8 +21,9 @@ from tests.utils import AssertMixin
 
 class NewsArticleTestsMixin:
     def _create_valid_news_article_model_instance(
-        self, news_article_id: str = "11111111-1111-1111-1111-111111111111",
-            author_id: str = "22222222-2222-2222-2222-222222222222",
+        self,
+        news_article_id: str = "11111111-1111-1111-1111-111111111111",
+        author_id: str = "22222222-2222-2222-2222-222222222222",
     ) -> NewsArticleModel:
         return NewsArticleModel(
             id=news_article_id,
@@ -61,19 +65,23 @@ class NewsArticleTestsMixin:
             )
             await news_article.save()
 
-    async def _populate_good_news_article(self, author_id: str | None = None) -> NewsArticleModel:
+    async def _populate_good_news_article(
+        self, author_id: str | None = None
+    ) -> NewsArticleModel:
         published_model_instance = self._create_valid_news_article_model_instance(
             news_article_id=str(uuid4()),
-            author_id=author_id if author_id else str(uuid4())
+            author_id=author_id if author_id else str(uuid4()),
         )
         published_model_instance.revoke_reason = None
         await published_model_instance.save()
         return published_model_instance
 
-    async def _populate_revoked_news_article(self, author_id: str | None = None) -> NewsArticleModel:
+    async def _populate_revoked_news_article(
+        self, author_id: str | None = None
+    ) -> NewsArticleModel:
         revoked_model_instance = self._create_valid_news_article_model_instance(
             news_article_id=str(uuid4()),
-            author_id=author_id if author_id else str(uuid4())
+            author_id=author_id if author_id else str(uuid4()),
         )
         revoked_model_instance.revoke_reason = "Fake"
         await revoked_model_instance.save()
@@ -87,7 +95,9 @@ class NewsArticleTestsMixin:
         return author_model_instance
 
 
-class TortoiseNewsArticlesListQueriesTests(NewsArticleTestsMixin, AssertMixin, IsolatedAsyncioTestCase):
+class TortoiseNewsArticlesListQueriesTests(
+    NewsArticleTestsMixin, AssertMixin, IsolatedAsyncioTestCase
+):
     def setUp(self) -> None:
         self.queries = TortoiseNewsArticlesListQueries()
 
@@ -129,19 +139,16 @@ class TortoiseNewsArticlesListQueriesTests(NewsArticleTestsMixin, AssertMixin, I
         good_news_article_model_instance = await self._populate_good_news_article(
             author_id=author_model_instance.id
         )
-        revoked_news_article_model_instance = (
-            await self._populate_revoked_news_article(
-                author_id=author_model_instance.id
-            )
+        revoked_news_article_model_instance = await self._populate_revoked_news_article(
+            author_id=author_model_instance.id
         )
 
         filter_ = NewsArticleListFilter(revoked="no_revoked")
         page = await self.queries.get_page(offset=0, limit=10, filter_=filter_)
 
         self.assertCountEqual(
-            (item.news_article_id
-            for item in page.items),
-            [good_news_article_model_instance.id]
+            (item.news_article_id for item in page.items),
+            [good_news_article_model_instance.id],
         )
 
     async def test_get_page_filter_only_revoked(self) -> None:
@@ -149,23 +156,22 @@ class TortoiseNewsArticlesListQueriesTests(NewsArticleTestsMixin, AssertMixin, I
         good_news_article_model_instance = await self._populate_good_news_article(
             author_id=author_model_instance.id
         )
-        revoked_news_article_model_instance = (
-            await self._populate_revoked_news_article(
-                author_id=author_model_instance.id
-            )
+        revoked_news_article_model_instance = await self._populate_revoked_news_article(
+            author_id=author_model_instance.id
         )
 
         filter_ = NewsArticleListFilter(revoked="only_revoked")
         page = await self.queries.get_page(offset=0, limit=10, filter_=filter_)
 
         self.assertCountEqual(
-            (item.news_article_id
-             for item in page.items),
-            [revoked_news_article_model_instance.id]
+            (item.news_article_id for item in page.items),
+            [revoked_news_article_model_instance.id],
         )
 
 
-class TortoiseNewsArticleDetailsQueriesTests(NewsArticleTestsMixin, IsolatedAsyncioTestCase):
+class TortoiseNewsArticleDetailsQueriesTests(
+    NewsArticleTestsMixin, IsolatedAsyncioTestCase
+):
     def setUp(self) -> None:
         self.queries = TortoiseNewsArticleDetailsQueries()
 
@@ -187,8 +193,9 @@ class TortoiseNewsArticleDetailsQueriesTests(NewsArticleTestsMixin, IsolatedAsyn
         self.assertEqual(details.author.author_id, saved_author_model_instance.id)
         self.assertEqual(details.author.name, saved_author_model_instance.name)
         self.assertEqual(details.image.url, saved_model_instance.image_url)
-        self.assertEqual(details.image.description,
-                         saved_model_instance.image_description)
+        self.assertEqual(
+            details.image.description, saved_model_instance.image_description
+        )
         self.assertEqual(details.image.author, saved_model_instance.image_author)
         self.assertEqual(details.text, saved_model_instance.text)
         self.assertEqual(details.revoke_reason, saved_model_instance.revoke_reason)
@@ -201,7 +208,9 @@ class TortoiseNewsArticleDetailsQueriesTests(NewsArticleTestsMixin, IsolatedAsyn
             )
 
 
-class TortoiseNewsArticleRepositoryTests(NewsArticleTestsMixin, AssertMixin, IsolatedAsyncioTestCase):
+class TortoiseNewsArticleRepositoryTests(
+    NewsArticleTestsMixin, AssertMixin, IsolatedAsyncioTestCase
+):
     def setUp(self) -> None:
         self.repository = TortoiseNewsArticleRepository()
 

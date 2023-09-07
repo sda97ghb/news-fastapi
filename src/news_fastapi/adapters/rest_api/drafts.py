@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 from starlette.status import HTTP_204_NO_CONTENT, HTTP_409_CONFLICT
 
-from news_fastapi.adapters.rest_api.models import Author, Draft, DraftsListItem
+from news_fastapi.adapters.rest_api.models import Author, Draft, DraftsListItem, Image
 from news_fastapi.adapters.rest_api.parameters import (
     DraftIdInPath,
     LimitInQuery,
@@ -20,9 +20,13 @@ from news_fastapi.core.drafts.commands import (
     PublishDraftService,
     UpdateDraftService,
 )
-from news_fastapi.core.drafts.exceptions import CreateDraftError
+from news_fastapi.core.drafts.exceptions import (
+    CreateDraftConflictError,
+    CreateDraftError,
+)
 from news_fastapi.core.drafts.queries import DraftDetailsService, DraftsListService
 from news_fastapi.domain.publish import DraftAlreadyPublishedError, InvalidDraftError
+from news_fastapi.domain.value_objects import Image as Domain_Image
 
 router = APIRouter()
 
@@ -46,7 +50,7 @@ async def get_drafts_list(
         limit = DEFAULT_DRAFTS_LIST_LIMIT
     if offset is None:
         offset = 0
-    page = await drafts_list_service.get_page(offset, limit)
+    page = await drafts_list_service.get_page(offset=offset, limit=limit)
     return [
         DraftsListItem(
             id=item.draft_id,
@@ -71,6 +75,7 @@ class CreateDraftResponseModel(BaseModel):
     tags=["Drafts"],
     summary="Create a draft for news article",
 )
+@inject
 async def create_draft(
     news_article_id: Annotated[
         str | None,
@@ -78,14 +83,26 @@ async def create_draft(
             embed=True,
             description="News article ID to modify article, null to create from scratch",
             examples=["11112222-3333-4444-5555-666677778888", None],
+            alias="newsArticleId",
+            validation_alias="newsArticleId",
         ),
-    ],
+    ] = None,
     create_draft_service: CreateDraftService = Depends(Provide["create_draft_service"]),
-) -> CreateDraftResponseModel:
+) -> CreateDraftResponseModel | JSONResponse:
     try:
-        result = await create_draft_service.create_draft(news_article_id)
+        result = await create_draft_service.create_draft(
+            news_article_id=news_article_id
+        )
     except CreateDraftError as err:
         raise HTTPException(status_code=HTTP_409_CONFLICT, detail=str(err)) from err
+    except CreateDraftConflictError as err:
+        return JSONResponse(
+            content={
+                "createdBy": {"userId": err.created_by_user_id},
+                "draftId": err.draft_id,
+            },
+            status_code=HTTP_409_CONFLICT,
+        )
     return CreateDraftResponseModel(draft_id=result.draft.id)
 
 
@@ -95,13 +112,14 @@ async def create_draft(
     tags=["Drafts"],
     summary="Get a draft by ID",
 )
+@inject
 async def get_draft_by_id(
     draft_id: DraftIdInPath,
     draft_details_service: DraftDetailsService = Depends(
         Provide["draft_details_service"]
     ),
 ) -> Draft:
-    details = await draft_details_service.get_draft(draft_id)
+    details = await draft_details_service.get_draft(draft_id=draft_id)
     return Draft(
         id=details.draft_id,
         news_article_id=details.news_article_id,
@@ -112,6 +130,15 @@ async def get_draft_by_id(
         author=Author(
             id=details.author.author_id,
             name=details.author.name,
+        ),
+        image=(
+            Image(
+                url=details.image.url,
+                description=details.image.description,
+                author=details.image.author,
+            )
+            if details.image is not None
+            else None
         ),
         text=details.text,
         created_by_user_id=details.created_by_user_id,
@@ -125,6 +152,7 @@ async def get_draft_by_id(
     tags=["Drafts"],
     summary="Update the draft with ID",
 )
+@inject
 async def update_draft(
     draft_id: DraftIdInPath,
     headline: Annotated[
@@ -133,6 +161,24 @@ async def update_draft(
             embed=True,
             description="New headline",
             examples=["The Ultimate Cat Dresses Checklist"],
+        ),
+    ],
+    author_id: Annotated[
+        str,
+        Body(
+            embed=True,
+            description="New author ID",
+            examples=["11112222-3333-4444-5555-666677778888"],
+            alias="authorId",
+            validation_alias="authorId",
+        ),
+    ],
+    text: Annotated[
+        str,
+        Body(
+            embed=True,
+            description="New text",
+            examples=["Full text of the news article..."],
         ),
     ],
     date_published: Annotated[
@@ -144,24 +190,24 @@ async def update_draft(
                 "or null, if should be published ASAP"
             ),
             examples=["2022-01-01T15:00:00+0000"],
+            alias="datePublished",
+            validation_alias="datePublished",
         ),
-    ],
-    author_id: Annotated[
-        str,
+    ] = None,
+    image: Annotated[
+        Image | None,
         Body(
             embed=True,
-            description="New author ID",
-            examples=["11112222-3333-4444-5555-666677778888"],
+            description="New image",
+            examples=[
+                Image(
+                    url="https://example.com/images/1234",
+                    description="Ural mountains at summer",
+                    author="Jessica Green",
+                )
+            ],
         ),
-    ],
-    text: Annotated[
-        str,
-        Body(
-            embed=True,
-            description="New text",
-            examples=["Full text of the news article..."],
-        ),
-    ],
+    ] = None,
     update_draft_service: UpdateDraftService = Depends(Provide["update_draft_service"]),
 ) -> None:
     await update_draft_service.update_draft(
@@ -171,6 +217,15 @@ async def update_draft(
             DateTime.fromisoformat(date_published) if date_published else None
         ),
         new_author_id=author_id,
+        new_image=(
+            Domain_Image(
+                url=image.url,
+                description=image.description,
+                author=image.author,
+            )
+            if image is not None
+            else None
+        ),
         new_text=text,
     )
 
@@ -181,11 +236,12 @@ async def update_draft(
     tags=["Drafts"],
     summary="Delete the draft with ID",
 )
+@inject
 async def delete_draft(
     draft_id: DraftIdInPath,
     delete_draft_service: DeleteDraftService = Depends(Provide["delete_draft_service"]),
 ) -> None:
-    await delete_draft_service.delete_draft(draft_id)
+    await delete_draft_service.delete_draft(draft_id=draft_id)
 
 
 class PublishDraftResponse(BaseModel):
@@ -200,6 +256,7 @@ class PublishDraftResponse(BaseModel):
     tags=["Drafts"],
     summary="Publish the draft with ID",
 )
+@inject
 async def publish_draft(
     draft_id: DraftIdInPath,
     publish_draft_service: PublishDraftService = Depends(
@@ -207,7 +264,7 @@ async def publish_draft(
     ),
 ) -> PublishDraftResponse | JSONResponse:
     try:
-        result = await publish_draft_service.publish_draft(draft_id)
+        result = await publish_draft_service.publish_draft(draft_id=draft_id)
     except DraftAlreadyPublishedError as err:
         raise HTTPException(status_code=HTTP_409_CONFLICT, detail=str(err)) from err
     except InvalidDraftError as err:

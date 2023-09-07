@@ -1,11 +1,14 @@
 from typing import Iterable
 from unittest import IsolatedAsyncioTestCase
 
-from news_fastapi.core.authors.commands import CreateAuthorService, UpdateAuthorService, \
-    DeleteAuthorService
+from news_fastapi.core.authors.commands import (
+    CreateAuthorService,
+    DeleteAuthorService,
+    UpdateAuthorService,
+)
 from news_fastapi.core.exceptions import AuthorizationError
-from news_fastapi.domain.author import AuthorFactory, AuthorDeleted
-from news_fastapi.domain.seed_work.events import DomainEventBuffer, DomainEvent
+from news_fastapi.domain.author import AuthorDeleted, AuthorFactory
+from news_fastapi.domain.seed_work.events import DomainEvent, DomainEventBuffer
 from news_fastapi.utils.exceptions import NotFoundError
 from tests.core.authors.mixins import AuthorTestsMixin
 from tests.core.fixtures import AuthorsAuthFixture, TransactionManagerFixture
