@@ -121,19 +121,21 @@ class TortoiseDraftRepository(DraftRepository):
     ) -> Collection[Draft]:
         if offset < 0:
             raise ValueError("Offset must be non-negative")
-        model_instances_list = await DraftModel.all().offset(offset).limit(limit)
+        model_instances_list = (
+            await DraftModel.select_for_update().all().offset(offset).limit(limit)
+        )
         return self._to_entity_list(model_instances_list)
 
     async def get_draft_by_id(self, draft_id: str) -> Draft:
         try:
-            model_instance = await DraftModel.get(id=draft_id)
+            model_instance = await DraftModel.select_for_update().get(id=draft_id)
             return self._to_entity(model_instance)
         except DoesNotExist as err:
             raise NotFoundError(f"Draft with id {draft_id} does not exist") from err
 
     async def get_not_published_draft_by_news_id(self, news_article_id: str) -> Draft:
         try:
-            model_instance = await DraftModel.get(
+            model_instance = await DraftModel.select_for_update().get(
                 is_published=False, news_article_id=news_article_id
             )
             return self._to_entity(model_instance)
@@ -143,7 +145,9 @@ class TortoiseDraftRepository(DraftRepository):
             ) from err
 
     async def get_drafts_for_author(self, author_id: str) -> Collection[Draft]:
-        model_instances_list = await DraftModel.filter(author_id=author_id)
+        model_instances_list = await DraftModel.select_for_update().filter(
+            author_id=author_id
+        )
         return self._to_entity_list(model_instances_list)
 
     async def delete(self, draft: Draft) -> None:

@@ -171,7 +171,7 @@ class TortoiseNewsArticleRepository(NewsArticleRepository):
     ) -> Collection[NewsArticle]:
         if offset < 0:
             raise ValueError("Offset must be positive integer")
-        queryset = NewsArticleModel.all()
+        queryset = NewsArticleModel.select_for_update().all()
         if filter_ is not None:
             queryset = self._apply_filter_to_queryset(filter_, queryset)
         model_instances_list = await queryset.offset(offset).limit(limit)
@@ -188,7 +188,9 @@ class TortoiseNewsArticleRepository(NewsArticleRepository):
 
     async def get_news_article_by_id(self, news_article_id: str) -> NewsArticle:
         try:
-            model_instance = await NewsArticleModel.get(id=news_article_id)
+            model_instance = await NewsArticleModel.select_for_update().get(
+                id=news_article_id
+            )
             return self._to_entity(model_instance)
         except DoesNotExist as err:
             raise NotFoundError(

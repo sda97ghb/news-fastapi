@@ -52,7 +52,7 @@ class TortoiseAuthorRepository(AuthorRepository):
 
     async def get_author_by_id(self, author_id: str) -> Author:
         try:
-            model_instance = await AuthorModel.get(id=author_id)
+            model_instance = await AuthorModel.select_for_update().get(id=author_id)
             return self._to_entity(model_instance)
         except DoesNotExist as err:
             raise NotFoundError(f"Author with id {author_id} does not exist") from err
@@ -62,11 +62,13 @@ class TortoiseAuthorRepository(AuthorRepository):
     ) -> Collection[Author]:
         if offset < 0:
             raise ValueError("Offset must be non-negative integer")
-        model_instances_list = await AuthorModel.all().offset(offset).limit(limit)
+        model_instances_list = (
+            await AuthorModel.select_for_update().all().offset(offset).limit(limit)
+        )
         return self._to_entity_list(model_instances_list)
 
     async def get_authors_in_bulk(self, id_list: list[str]) -> Mapping[str, Author]:
-        model_instances_mapping = await AuthorModel.in_bulk(
+        model_instances_mapping = await AuthorModel.select_for_update().in_bulk(
             id_list=id_list, field_name="id"
         )
         return {
@@ -102,7 +104,9 @@ class TortoiseDefaultAuthorRepository(DefaultAuthorRepository):
         if author_id is None:
             await DefaultAuthorModel.filter(user_id=user_id).delete()
         else:
-            default_author = await DefaultAuthorModel.get_or_none(user_id=user_id)
+            default_author = await DefaultAuthorModel.select_for_update().get_or_none(
+                user_id=user_id
+            )
             if default_author is None:
                 default_author = DefaultAuthorModel(user_id=user_id)
             default_author.author_id = author_id
