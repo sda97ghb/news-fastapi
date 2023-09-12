@@ -138,9 +138,6 @@ class TortoiseNewsArticleDetailsQueries(NewsArticleDetailsQueries):
 
 
 class TortoiseNewsArticleRepository(NewsArticleRepository):
-    async def next_identity(self) -> str:
-        return str(uuid4())
-
     async def save(self, news_article: NewsArticle) -> None:
         image_url = None
         image_description = None

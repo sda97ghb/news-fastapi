@@ -1,6 +1,7 @@
-from unittest import TestCase
+from unittest import IsolatedAsyncioTestCase, TestCase
+from uuid import UUID
 
-from news_fastapi.domain.seed_work.entity import Entity
+from news_fastapi.domain.seed_work.entity import Entity, Repository
 
 
 class Cat(Entity):
@@ -57,3 +58,22 @@ class EntityTests(TestCase):
         luna = Cat(id_="11111111-1111-1111-1111-111111111111", name="Luna")
         charlie = Dog(id_="11111111-1111-1111-1111-111111111111", name="Charlie")
         self.assertNotEqual(luna, charlie)
+
+
+class CatRepository(Repository):
+    pass
+
+
+class RepositoryTests(IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        self.repository = CatRepository()
+
+    async def test_next_identity(self) -> None:
+        id_1 = await self.repository.next_identity()
+        id_2 = await self.repository.next_identity()
+        for id_ in [id_1, id_2]:
+            try:
+                UUID(id_)
+            except ValueError:
+                self.fail(f"next_identity returned badly formed UUID: {id_}")
+        self.assertNotEqual(id_1, id_2)

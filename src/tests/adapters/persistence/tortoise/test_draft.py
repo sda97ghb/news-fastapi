@@ -193,16 +193,6 @@ class TortoiseDraftRepositoryTests(
     async def assertDraftDoesNotExist(self, draft_id: str) -> None:
         self.assertFalse(await DraftModel.exists(id=draft_id))
 
-    async def test_next_identity(self) -> None:
-        id_1 = await self.repository.next_identity()
-        id_2 = await self.repository.next_identity()
-        for id_ in [id_1, id_2]:
-            try:
-                UUID(id_)
-            except ValueError:
-                self.fail(f"next_identity returned badly formed UUID: {id_}")
-        self.assertNotEqual(id_1, id_2)
-
     async def test_save_creates_if_does_not_exist(self) -> None:
         draft = self._create_draft()
         await self.repository.save(draft)

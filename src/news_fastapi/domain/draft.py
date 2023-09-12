@@ -3,7 +3,7 @@ from collections.abc import Collection
 from datetime import datetime as DateTime
 
 from news_fastapi.domain.news_article import NewsArticle
-from news_fastapi.domain.seed_work.entity import Entity
+from news_fastapi.domain.seed_work.entity import Entity, Repository
 from news_fastapi.domain.value_objects import Image
 
 
@@ -142,11 +142,7 @@ class DraftFactory:
         )
 
 
-class DraftRepository(ABC):
-    @abstractmethod
-    async def next_identity(self) -> str:
-        raise NotImplementedError
-
+class DraftRepository(Repository, ABC):
     @abstractmethod
     async def save(self, draft: Draft) -> None:
         raise NotImplementedError

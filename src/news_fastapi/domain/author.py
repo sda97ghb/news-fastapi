@@ -3,7 +3,7 @@ from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from news_fastapi.domain.seed_work.entity import Entity
+from news_fastapi.domain.seed_work.entity import Entity, Repository
 from news_fastapi.domain.seed_work.events import DomainEvent
 
 
@@ -31,11 +31,7 @@ class AuthorFactory:
         return Author(id_=author_id, name=name)
 
 
-class AuthorRepository(ABC):
-    @abstractmethod
-    async def next_identity(self) -> str:
-        raise NotImplementedError
-
+class AuthorRepository(Repository, ABC):
     @abstractmethod
     async def get_author_by_id(self, author_id: str) -> Author:
         raise NotImplementedError

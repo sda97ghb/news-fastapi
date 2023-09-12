@@ -47,9 +47,6 @@ class TortoiseAuthorDetailsQueries(AuthorDetailsQueries):
 
 
 class TortoiseAuthorRepository(AuthorRepository):
-    async def next_identity(self) -> str:
-        return str(uuid4())
-
     async def get_author_by_id(self, author_id: str) -> Author:
         try:
             model_instance = await AuthorModel.select_for_update().get(id=author_id)

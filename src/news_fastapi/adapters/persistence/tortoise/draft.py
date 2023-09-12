@@ -1,6 +1,5 @@
 from collections.abc import Iterable
 from typing import Collection
-from uuid import uuid4
 
 from tortoise.exceptions import DoesNotExist
 
@@ -89,9 +88,6 @@ class TortoiseDraftDetailsQueries(DraftDetailsQueries):
 
 
 class TortoiseDraftRepository(DraftRepository):
-    async def next_identity(self) -> str:
-        return str(uuid4())
-
     async def save(self, draft: Draft) -> None:
         image_url = None
         image_description = None

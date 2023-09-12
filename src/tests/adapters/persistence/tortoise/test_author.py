@@ -102,16 +102,6 @@ class TortoiseAuthorRepositoryTests(
         self.assertEqual(author.id, model_instance.id)
         self.assertEqual(author.name, model_instance.name)
 
-    async def test_next_identity(self) -> None:
-        id_1 = await self.repository.next_identity()
-        id_2 = await self.repository.next_identity()
-        for id_ in [id_1, id_2]:
-            try:
-                UUID(id_)
-            except ValueError:
-                self.fail(f"next_identity returned badly formed UUID: {id_}")
-        self.assertNotEqual(id_1, id_2)
-
     async def test_get_author_by_id(self) -> None:
         saved_author_model_instance = await self._populate_author()
 

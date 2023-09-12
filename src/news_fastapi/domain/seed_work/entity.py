@@ -1,4 +1,6 @@
+from abc import ABC
 from typing import Any
+from uuid import uuid4
 
 
 class Entity:
@@ -19,3 +21,8 @@ class Entity:
         if type(other) != type(self):  # pylint: disable=unidiomatic-typecheck
             return False
         return other.id == self.id
+
+
+class Repository(ABC):
+    async def next_identity(self) -> str:
+        return str(uuid4())

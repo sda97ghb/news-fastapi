@@ -3,7 +3,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime as DateTime
 from typing import Collection, Literal
 
-from news_fastapi.domain.seed_work.entity import Entity
+from news_fastapi.domain.seed_work.entity import Entity, Repository
 from news_fastapi.domain.value_objects import Image
 from news_fastapi.utils.sentinels import Undefined, UndefinedType
 
@@ -132,11 +132,7 @@ class NewsArticleListFilter:
     revoked: Literal["no_revoked", "only_revoked"] | UndefinedType = Undefined
 
 
-class NewsArticleRepository(ABC):
-    @abstractmethod
-    async def next_identity(self) -> str:
-        raise NotImplementedError
-
+class NewsArticleRepository(Repository, ABC):
     @abstractmethod
     async def save(self, news_article: NewsArticle) -> None:
         raise NotImplementedError
