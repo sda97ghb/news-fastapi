@@ -1,6 +1,5 @@
 from collections.abc import Iterable, Mapping
 from typing import Collection
-from uuid import uuid4
 
 from tortoise.exceptions import DoesNotExist
 from tortoise.queryset import QuerySet
@@ -139,21 +138,14 @@ class TortoiseNewsArticleDetailsQueries(NewsArticleDetailsQueries):
 
 class TortoiseNewsArticleRepository(NewsArticleRepository):
     async def save(self, news_article: NewsArticle) -> None:
-        image_url = None
-        image_description = None
-        image_author = None
-        if news_article.image is not None:
-            image_url = news_article.image.url
-            image_description = news_article.image.description
-            image_author = news_article.image.author
         await NewsArticleModel.update_or_create(
             {
                 "headline": news_article.headline,
                 "date_published": news_article.date_published,
                 "author_id": news_article.author_id,
-                "image_url": image_url,
-                "image_description": image_description,
-                "image_author": image_author,
+                "image_url": news_article.image.url,
+                "image_description": news_article.image.description,
+                "image_author": news_article.image.author,
                 "text": news_article.text,
                 "revoke_reason": news_article.revoke_reason,
             },

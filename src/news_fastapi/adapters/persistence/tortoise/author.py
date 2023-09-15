@@ -1,6 +1,5 @@
 from collections.abc import Iterable
 from typing import Collection, Mapping
-from uuid import uuid4
 
 from tortoise.exceptions import DoesNotExist
 
