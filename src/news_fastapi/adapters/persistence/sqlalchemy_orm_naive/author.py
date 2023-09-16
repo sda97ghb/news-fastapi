@@ -3,7 +3,7 @@ from typing import Collection, Mapping, cast
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from news_fastapi.adapters.persistence.sqlalchemy_orm.models import (
+from news_fastapi.adapters.persistence.sqlalchemy_orm_naive.models import (
     AuthorModel,
     DefaultAuthorModel,
 )

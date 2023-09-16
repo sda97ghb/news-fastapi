@@ -5,12 +5,12 @@ from uuid import uuid4
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-from news_fastapi.adapters.persistence.sqlalchemy_orm.draft import (
+from news_fastapi.adapters.persistence.sqlalchemy_orm_naive.draft import (
     SQLAlchemyORMDraftDetailsQueries,
     SQLAlchemyORMDraftRepository,
     SQLAlchemyORMDraftsListQueries,
 )
-from news_fastapi.adapters.persistence.sqlalchemy_orm.models import (
+from news_fastapi.adapters.persistence.sqlalchemy_orm_naive.models import (
     AuthorModel,
     DraftModel,
     Model,

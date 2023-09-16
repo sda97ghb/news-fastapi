@@ -4,7 +4,7 @@ from typing import Collection, cast
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from news_fastapi.adapters.persistence.sqlalchemy_orm.models import (
+from news_fastapi.adapters.persistence.sqlalchemy_orm_naive.models import (
     AuthorModel,
     DraftModel,
 )

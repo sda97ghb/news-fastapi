@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import join
 from sqlalchemy.sql.functions import count
 
-from news_fastapi.adapters.persistence.sqlalchemy_orm.models import (
+from news_fastapi.adapters.persistence.sqlalchemy_orm_naive.models import (
     AuthorModel,
     NewsArticleModel,
 )

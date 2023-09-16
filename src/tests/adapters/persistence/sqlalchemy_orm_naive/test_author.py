@@ -3,13 +3,13 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-from news_fastapi.adapters.persistence.sqlalchemy_orm.author import (
+from news_fastapi.adapters.persistence.sqlalchemy_orm_naive.author import (
     SQLAlchemyORMAuthorDetailsQueries,
     SQLAlchemyORMAuthorRepository,
     SQLAlchemyORMAuthorsListQueries,
     SQLAlchemyORMDefaultAuthorRepository,
 )
-from news_fastapi.adapters.persistence.sqlalchemy_orm.models import (
+from news_fastapi.adapters.persistence.sqlalchemy_orm_naive.models import (
     AuthorModel,
     DefaultAuthorModel,
     Model,
