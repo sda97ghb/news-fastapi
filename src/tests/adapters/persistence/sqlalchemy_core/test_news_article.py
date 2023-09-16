@@ -6,12 +6,12 @@ from uuid import uuid4
 from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from news_fastapi.adapters.persistence.sqlalchemy.news_article import (
+from news_fastapi.adapters.persistence.sqlalchemy_core.news_article import (
     SQLAlchemyNewsArticleDetailsQueries,
     SQLAlchemyNewsArticleRepository,
     SQLAlchemyNewsArticlesListQueries,
 )
-from news_fastapi.adapters.persistence.sqlalchemy.tables import (
+from news_fastapi.adapters.persistence.sqlalchemy_core.tables import (
     authors,
     metadata,
     news_articles,

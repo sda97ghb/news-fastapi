@@ -2,8 +2,8 @@ from unittest import IsolatedAsyncioTestCase
 
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from news_fastapi.adapters.persistence.sqlalchemy.tables import metadata
-from news_fastapi.adapters.persistence.sqlalchemy.transaction import (
+from news_fastapi.adapters.persistence.sqlalchemy_core.tables import metadata
+from news_fastapi.adapters.persistence.sqlalchemy_core.transaction import (
     SQLAlchemyTransactionManager,
 )
 from news_fastapi.core.events.registry import DomainEventHandlerRegistry

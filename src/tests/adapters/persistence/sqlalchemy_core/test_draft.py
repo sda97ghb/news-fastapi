@@ -7,12 +7,12 @@ from sqlalchemy import RowMapping, insert, select
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.sql.functions import count
 
-from news_fastapi.adapters.persistence.sqlalchemy.draft import (
+from news_fastapi.adapters.persistence.sqlalchemy_core.draft import (
     SQLAlchemyDraftDetailsQueries,
     SQLAlchemyDraftRepository,
     SQLAlchemyDraftsListQueries,
 )
-from news_fastapi.adapters.persistence.sqlalchemy.tables import (
+from news_fastapi.adapters.persistence.sqlalchemy_core.tables import (
     authors,
     drafts,
     metadata,

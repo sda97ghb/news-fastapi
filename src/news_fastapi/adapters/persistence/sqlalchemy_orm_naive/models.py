@@ -2,7 +2,7 @@ from datetime import datetime as DateTime
 
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from news_fastapi.adapters.persistence.sqlalchemy.utils import UTCDATETIME
+from news_fastapi.adapters.persistence.sqlalchemy_core.utils import UTCDATETIME
 
 
 class Model(DeclarativeBase):

@@ -6,7 +6,10 @@ from sqlalchemy import Row, delete, insert, select, update
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from news_fastapi.adapters.persistence.sqlalchemy.tables import authors, default_authors
+from news_fastapi.adapters.persistence.sqlalchemy_core.tables import (
+    authors,
+    default_authors,
+)
 from news_fastapi.core.authors.queries import (
     AuthorDetails,
     AuthorDetailsQueries,

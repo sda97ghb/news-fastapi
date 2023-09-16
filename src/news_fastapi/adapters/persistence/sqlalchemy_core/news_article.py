@@ -6,7 +6,10 @@ from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.sql.functions import count
 
-from news_fastapi.adapters.persistence.sqlalchemy.tables import authors, news_articles
+from news_fastapi.adapters.persistence.sqlalchemy_core.tables import (
+    authors,
+    news_articles,
+)
 from news_fastapi.core.news.queries import (
     NewsArticleDetails,
     NewsArticleDetailsAuthor,

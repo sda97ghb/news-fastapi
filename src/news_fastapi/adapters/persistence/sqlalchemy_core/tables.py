@@ -1,6 +1,6 @@
 from sqlalchemy import BOOLEAN, TEXT, Column, MetaData, Table
 
-from news_fastapi.adapters.persistence.sqlalchemy.utils import UTCDATETIME
+from news_fastapi.adapters.persistence.sqlalchemy_core.utils import UTCDATETIME
 
 metadata = MetaData()
 

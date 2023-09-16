@@ -5,13 +5,13 @@ from uuid import uuid4
 from sqlalchemy import Row, insert, select
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from news_fastapi.adapters.persistence.sqlalchemy.author import (
+from news_fastapi.adapters.persistence.sqlalchemy_core.author import (
     SQLAlchemyAuthorDetailsQueries,
     SQLAlchemyAuthorRepository,
     SQLAlchemyAuthorsListQueries,
     SQLAlchemyDefaultAuthorRepository,
 )
-from news_fastapi.adapters.persistence.sqlalchemy.tables import (
+from news_fastapi.adapters.persistence.sqlalchemy_core.tables import (
     authors,
     default_authors,
     metadata,
