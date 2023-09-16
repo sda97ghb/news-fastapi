@@ -5,6 +5,7 @@ from typing import Collection, Literal
 
 from news_fastapi.domain.seed_work.entity import Entity, Repository
 from news_fastapi.domain.value_objects import Image
+from news_fastapi.utils.format_callable import format_callable_call
 from news_fastapi.utils.sentinels import Undefined, UndefinedType
 
 
@@ -33,6 +34,9 @@ class NewsArticle(Entity):
         self._image = image
         self._text = text
         self._revoke_reason = revoke_reason
+
+    def __repr__(self) -> str:
+        return format_callable_call("NewsArticle", id=self.id)
 
     @property
     def headline(self) -> str:

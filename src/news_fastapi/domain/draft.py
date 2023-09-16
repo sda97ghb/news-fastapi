@@ -5,6 +5,7 @@ from datetime import datetime as DateTime
 from news_fastapi.domain.news_article import NewsArticle
 from news_fastapi.domain.seed_work.entity import Entity, Repository
 from news_fastapi.domain.value_objects import Image
+from news_fastapi.utils.format_callable import format_callable_call
 
 
 class PublishedDraftEditError(Exception):
@@ -43,6 +44,9 @@ class Draft(Entity):
         self._image = image
         self._text = text
         self._is_published = is_published
+
+    def __repr__(self) -> str:
+        return format_callable_call("Draft", id=self.id)
 
     @property
     def news_article_id(self) -> str | None:

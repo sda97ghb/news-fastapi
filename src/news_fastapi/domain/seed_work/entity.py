@@ -2,6 +2,8 @@ from abc import ABC
 from typing import Any
 from uuid import uuid4
 
+from news_fastapi.utils.format_callable import format_callable_call
+
 
 class Entity:
     _id: str
@@ -21,6 +23,12 @@ class Entity:
         if type(other) != type(self):  # pylint: disable=unidiomatic-typecheck
             return False
         return other.id == self.id
+
+    def __repr__(self) -> str:
+        return format_callable_call("Entity", id=self.id)
+
+    def __str__(self) -> str:
+        return repr(self)
 
 
 class Repository(ABC):

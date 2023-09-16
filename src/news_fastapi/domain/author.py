@@ -5,6 +5,7 @@ from typing import Any
 
 from news_fastapi.domain.seed_work.entity import Entity, Repository
 from news_fastapi.domain.seed_work.events import DomainEvent
+from news_fastapi.utils.format_callable import format_callable_call
 
 
 class Author(Entity):
@@ -13,6 +14,9 @@ class Author(Entity):
     def __init__(self, id_: str, name: str) -> None:
         super().__init__(id_=id_)
         self._name = name
+
+    def __repr__(self) -> str:
+        return format_callable_call("Author", id=self.id, name=self.name)
 
     @property
     def name(self) -> str:
