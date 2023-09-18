@@ -3,7 +3,7 @@ News FastAPI
 
 # Architecture
 
-This project use Hexagonal Architecture and DDD.
+This project uses Hexagonal Architecture and DDD.
 
 ## Packages
 
@@ -69,7 +69,7 @@ Defines event handlers for domain events.
 ### `news_fastapi.core.transaction`
 
 Defines abstract transaction manager interface. This interface is implemented
-of infrastructure level.
+at infrastructure level.
 
 ### `news_fastapi.adapters`
 
@@ -103,7 +103,7 @@ REST API controllers.
 
 ## Code quality
 
-Run the following commands to ensure the code quality is high enough:
+Run the following commands to check the code quality:
 
 ```shell
 cd src
@@ -119,4 +119,22 @@ mypy news_fastapi
 
 # lint
 pylint --rcfile ../pyproject.toml news_fastapi
+
+# all previous commands can be run at once by qa.sh script
+./qa.sh
+```
+
+## Tests
+
+```shell
+cd src
+
+# all tests
+python -m unittest
+
+# tests from single file
+python -m unittest tests/path/to/file/test_whatever_you_need.py
+
+# tests from package
+python -m unittest discover tests/path/to/package/directory/
 ```
