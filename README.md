@@ -87,13 +87,41 @@ All persistence related implementations, i.e. implements repositories, queries, 
 
 Persistence related code implemented with TortoiseORM.
 
+### `news_fastapi.adapters.persistence.sqlalchemy`
+
+Persistence implemented with SQLAlchemy, partially with Core and 
+partially with Imperative Mapping.
+
+This implementation maps database rows directly to entity classes.
+
+Probably, this way is more preferable when used with hexagonal architecture,
+because it allows to completely separate entities and persistence and
+doesn't introduce any intermediate models. But it also has its own downsides:
+since it monkey patches entity classes, it can probably break them and also
+heavily depends on implementation details, i.e. protected attributes of entity classes.
+
+### `news_fastapi.adapters.persistence.sqlalchemy_core`
+
+Persistence implemented with SQLAlchemy Core only. No ORM used.
+
+### `news_fastapi.adapeters.persistence.sqlalchemy_orm_naive`
+
+Persistence implemented with SQLAlchemy ORM.
+
+'Naive' here means that ORM maps database rows not to entity classes,
+but to intermediate model classes. Then the model classes are manually
+mapped to entity classes in repositories.
+
+For direct mapping DB rows to entities see `news_fastapi.adapters.persistence.sqlalchemy`.
+
 ### `news_fastapi.adapters.rest_api`
 
-REST API controllers.
+REST API related code: controllers, middleware, ASGI app, etc.
 
 ### `news_fastapi.main`
 
-`news_fastapi.main.asgi` contains ASGI application definition.
+`news_fastapi.main.asgi` constructs ASGI application for ASGI web servers,
+such as uvicorn.
 
 `news_fastapi.main.container` IOC container, dependency root.
 
